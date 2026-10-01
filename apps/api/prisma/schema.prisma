@@ -29,6 +29,16 @@ enum Cycle {
   WEEKLY
 }
 
+enum BookType {
+  PERSONAL
+  SHARED
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -37,17 +47,59 @@ model User {
   currency     String   @default("KRW")
   createdAt    DateTime @default(now())
 
-  accounts      Account[]
-  categories    Category[]
-  transactions  Transaction[]
-  budgets       Budget[]
-  recurring     RecurringRule[]
+  memberships   BookMember[]
+  invites       BookInvite[]
+  transactions  Transaction[] @relation("TxAuthor")
   refreshTokens RefreshToken[]
+}
+
+/// 가계부. 모든 돈 데이터는 사용자가 아니라 가계부에 귀속된다.
+model Book {
+  id        String   @id @default(cuid())
+  name      String
+  type      BookType
+  createdAt DateTime @default(now())
+
+  members      BookMember[]
+  invites      BookInvite[]
+  accounts     Account[]
+  categories   Category[]
+  transactions Transaction[]
+  budgets      Budget[]
+  recurring    RecurringRule[]
+}
+
+model BookMember {
+  bookId   String
+  userId   String
+  role     MemberRole
+  joinedAt DateTime   @default(now())
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, userId])
+  @@index([userId])
+}
+
+model BookInvite {
+  id          String    @id @default(cuid())
+  bookId      String
+  code        String    @unique
+  createdById String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  book      Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
 }
 
 model Account {
   id        String      @id @default(cuid())
-  userId    String
+  bookId    String
   name      String
   type      AccountType
   /// 원 단위 정수
@@ -56,17 +108,17 @@ model Account {
   archived  Boolean     @default(false)
   createdAt DateTime    @default(now())
 
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  outgoing    Transaction[] @relation("TxAccount")
-  incoming    Transaction[] @relation("TxToAccount")
-  recurring   RecurringRule[]
+  book      Book            @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  outgoing  Transaction[]   @relation("TxAccount")
+  incoming  Transaction[]   @relation("TxToAccount")
+  recurring RecurringRule[]
 
-  @@index([userId])
+  @@index([bookId])
 }
 
 model Category {
   id        String       @id @default(cuid())
-  userId    String
+  bookId    String
   name      String
   type      CategoryType
   icon      String
@@ -74,17 +126,19 @@ model Category {
   sortOrder Int          @default(0)
   archived  Boolean      @default(false)
 
-  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book         Book            @relation(fields: [bookId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   budgets      Budget[]
   recurring    RecurringRule[]
 
-  @@index([userId, type])
+  @@index([bookId, type])
 }
 
 model Transaction {
   id          String   @id @default(cuid())
-  userId      String
+  bookId      String
+  /// 기록한 사람. 계정이 삭제되면 내역은 남지 않는다(가계부 데이터 정합성 우선).
+  createdById String
   type        TxType
   amount      BigInt
   accountId   String
@@ -95,34 +149,35 @@ model Transaction {
   recurringId String?
   createdAt   DateTime @default(now())
 
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book      Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  createdBy User           @relation("TxAuthor", fields: [createdById], references: [id], onDelete: Cascade)
   account   Account        @relation("TxAccount", fields: [accountId], references: [id])
   toAccount Account?       @relation("TxToAccount", fields: [toAccountId], references: [id])
   category  Category?      @relation(fields: [categoryId], references: [id])
   recurring RecurringRule? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
 
-  @@index([userId, occurredAt(sort: Desc)])
-  @@index([userId, categoryId])
+  @@index([bookId, occurredAt(sort: Desc)])
+  @@index([bookId, categoryId])
 }
 
 model Budget {
   id         String    @id @default(cuid())
-  userId     String
+  bookId     String
   /// YYYY-MM
   month      String
   /// null 이면 월 전체 예산
   categoryId String?
   amount     BigInt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book     Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  @@index([userId, month])
+  @@index([bookId, month])
 }
 
 model RecurringRule {
   id         String   @id @default(cuid())
-  userId     String
+  bookId     String
   type       TxType
   amount     BigInt
   accountId  String
@@ -134,7 +189,7 @@ model RecurringRule {
   nextRunAt  DateTime
   active     Boolean  @default(true)
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book         Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
   account      Account       @relation(fields: [accountId], references: [id])
   category     Category      @relation(fields: [categoryId], references: [id])
   transactions Transaction[]
