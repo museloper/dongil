@@ -41,7 +41,20 @@ cd apps/mobile
 - **입력 검증은 shared 의 Zod 스키마 하나로 한다.**
   - 서버는 `ZodPipe`, 앱 폼은 `safeParse` 로 같은 스키마를 쓴다.
   - 새 규칙은 shared 에 추가하고 양쪽에 중복 작성하지 않는다.
-- **모든 쿼리는 `userId` 로 범위를 제한한다.** 다른 사용자의 계좌·카테고리 id 가 들어오면 400 으로 거부한다.
+- **돈 데이터는 사용자가 아니라 가계부(`Book`)에 귀속된다.**
+  - 계좌·카테고리·거래·예산은 모두 `bookId` 를 갖는다.
+  - 가입하면 개인 가계부(PERSONAL)가 자동으로 생긴다. 공유 가계부(SHARED)는 최대 2명(`BOOK_MAX_MEMBERS`)이다.
+  - 가계부 하위 API 는 `books/:bookId/...` 경로를 쓰고, 컨트롤러에 `@UseGuards(BookAccessGuard)` 를 붙인다.
+  - 서비스에는 `@BookId()` 로 받은 id 만 넘기고, 모든 쿼리를 `where: { bookId }` 로 제한한다.
+  - 비멤버의 접근은 404 다. 존재 여부를 숨기기 위해서다.
+  - 다른 가계부의 계좌·카테고리 id 가 들어오면 400 으로 거부한다.
+- **거래에는 작성자(`createdById`)를 남긴다.** 수정해도 원래 작성자를 유지한다.
+- **가계부 규칙**(`books.service.ts`)
+  - OWNER 만 가계부를 삭제하거나 멤버를 내보낼 수 있다. OWNER 는 나갈 수 없다.
+  - 개인 가계부는 삭제할 수 없고, 초대도 받을 수 없다.
+  - 초대 코드는 6자리이고 24시간 동안 1회만 쓸 수 있다. 재발급하면 이전 코드는 무효가 된다.
+  - 참여할 때 정원 확인은 Serializable 트랜잭션 안에서 한다.
+  - `Book` 은 사용자 삭제에 cascade 되지 않는다. 테스트 정리는 `test/cleanup.ts` 의 `deleteUsers` 를 쓴다.
 - **계좌와 카테고리는 삭제하지 않고 `archived` 로 숨긴다.** 과거 거래가 참조하기 때문이다.
 - **인증:** 전역 `AuthGuard` 가 기본으로 적용된다. 공개 엔드포인트만 `@Public()` 을 붙인다.
   - Access 토큰 15분, Refresh 토큰 14일이며, refresh 할 때마다 회전하고 재사용을 막는다.
@@ -53,6 +66,9 @@ cd apps/mobile
 - **색은 `useTheme().colors` 토큰만 쓴다(`src/theme/tokens.ts`).** 하드코딩한 hex 는 다크모드를 깨뜨린다.
 - **서버 데이터는 `src/features/queries.ts` 의 훅으로 다룬다.**
   - 돈이 움직이는 mutation 은 `invalidateMoney` 로 transactions·stats·budget·accounts 캐시를 함께 무효화한다.
+  - 가계부 하위 훅은 `useBookId()` 와 `bookPath()` 를 쓰고, queryKey 두 번째 자리에 bookId 를 넣는다(`['accounts', bookId]`).
+  - 현재 가계부는 `useCurrentBook()` 으로 얻는다. 선택은 `src/lib/book-store.ts` 에 있고, 목록에 없으면 개인 가계부로 대체된다.
+  - 가계부 하위 요청이 404 면 `query-client.ts` 가 books 를 다시 받는다. 상대가 나를 내보냈거나 가계부를 삭제한 경우다.
 - **모달을 닫을 때는 `closeModal()`(`src/lib/nav.ts`)을 쓴다.** `router.back()` 은 딥링크로 열린 모달에서 동작하지 않는다.
 - 토큰 저장은 `src/lib/storage.ts` 를 쓴다. 네이티브는 SecureStore, `.web.ts` 는 localStorage 다.
 - 날짜 선택은 `@react-native-community/datetimepicker` v9 를 쓴다. `onChange` 는 deprecated 이므로 `onValueChange`/`onDismiss` 를 쓴다.
