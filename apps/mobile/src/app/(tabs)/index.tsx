@@ -5,11 +5,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { formatWon } from '@dongil/shared';
 import { CountUp } from '@/components/money';
 import { MonthSwitcher } from '@/components/month-switcher';
+import { BookSwitcher } from '@/components/book-switcher';
 import { Fab, Screen } from '@/components/screen';
 import { TransactionRow } from '@/components/transaction-row';
 import { AppText, Button, Card, EmptyState, ErrorState, PressableScale, ProgressBar, SectionTitle } from '@/components/ui';
 import { monthFilter, useAccounts, useBudget, useSummary, useTransactions } from '@/features/queries';
-import { useAuth } from '@/lib/auth';
 import { useMonth } from '@/lib/ui-store';
 import { useTheme } from '@/theme/theme';
 
@@ -17,7 +17,6 @@ const enter = (i: number) => FadeInDown.delay(i * 70).duration(450);
 
 export default function HomeScreen() {
   const { colors } = useTheme();
-  const user = useAuth((s) => s.user);
   const month = useMonth((s) => s.month);
   const summary = useSummary(month);
   const budget = useBudget(month);
@@ -41,7 +40,7 @@ export default function HomeScreen() {
     <View style={{ flex: 1 }}>
       <Screen
         right={<MonthSwitcher variant="heading" />}
-        title={user ? `${user.nickname}님` : undefined}
+        title={<BookSwitcher />}
         refreshing={refreshing}
         onRefresh={refresh}>
         {summary.error ? (

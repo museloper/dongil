@@ -1,17 +1,21 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { formatSigned, type TransactionDto } from '@dongil/shared';
+import { useCurrentBook } from '@/features/queries';
 import { useTheme } from '@/theme/theme';
 import { CategoryIcon } from './category-icon';
 import { AppText, PressableScale } from './ui';
 
 export function TransactionRow({ tx }: { tx: TransactionDto }) {
   const { colors } = useTheme();
+  const shared = useCurrentBook().book?.type === 'SHARED';
   const isTransfer = tx.type === 'TRANSFER';
   const title = isTransfer ? '이체' : (tx.category?.name ?? '미분류');
+  // 공유 가계부에서는 누가 기록했는지 맨 앞에 표시
+  const author = shared ? tx.author.nickname : null;
   const sub = isTransfer
-    ? `${tx.account.name} → ${tx.toAccount?.name ?? ''}`
-    : [tx.memo, tx.account.name].filter(Boolean).join(' · ');
+    ? [author, `${tx.account.name} → ${tx.toAccount?.name ?? ''}`].filter(Boolean).join(' · ')
+    : [author, tx.memo, tx.account.name].filter(Boolean).join(' · ');
 
   return (
     <PressableScale

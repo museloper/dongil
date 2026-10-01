@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, View } from 'react-native';
 import { Screen } from '@/components/screen';
 import { AppText, Card, PressableScale, Segmented, haptic, type IconName } from '@/components/ui';
+import { useCurrentBook } from '@/features/queries';
 import { API_BASE } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatMonthLabel } from '@/lib/date';
@@ -16,12 +17,14 @@ export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const { mode, setMode } = useThemeStore();
   const month = useMonth((s) => s.month);
+  const { book } = useCurrentBook();
   const [exporting, setExporting] = useState(false);
 
   const onExport = async () => {
     setExporting(true);
     try {
-      await exportMonthCsv(month);
+      if (!book) return;
+      await exportMonthCsv(book.id, month);
       haptic('success');
     } catch (e) {
       Alert.alert('내보내기 실패', e instanceof Error ? e.message : String(e));
@@ -63,6 +66,20 @@ export default function SettingsScreen() {
             { value: 'dark', label: '다크' },
           ]}
         />
+      </Card>
+
+      <Card padded={false} style={{ paddingVertical: 6 }}>
+        <MenuRow
+          icon={book?.type === 'SHARED' ? 'people-outline' : 'book-outline'}
+          label="가계부 설정"
+          onPress={() => router.push('/book-settings')}
+          right={
+            <AppText variant="label" tone="textSub" numberOfLines={1} style={{ maxWidth: 140 }}>
+              {book?.name}
+            </AppText>
+          }
+        />
+        <MenuRow icon="swap-horizontal-outline" label="가계부 전환 · 참여" onPress={() => router.push('/books')} />
       </Card>
 
       <Card padded={false} style={{ paddingVertical: 6 }}>

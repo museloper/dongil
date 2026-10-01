@@ -17,7 +17,7 @@ export function Screen({
   scroll = true,
   ...rest
 }: ScrollViewProps & {
-  title?: string;
+  title?: ReactNode;
   right?: ReactNode;
   children: ReactNode;
   refreshing?: boolean;
@@ -28,7 +28,7 @@ export function Screen({
   const { colors } = useTheme();
   const header = (title || right) && (
     <View style={styles.header}>
-      {title ? <AppText variant="title">{title}</AppText> : <View />}
+      {typeof title === 'string' ? <AppText variant="title">{title}</AppText> : (title ?? <View />)}
       {right}
     </View>
   );
