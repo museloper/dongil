@@ -3,12 +3,14 @@ import {
   monthRange,
   type AccountDto,
   type AccountType,
+  type BookDto,
   type BudgetDto,
   type BudgetUpsert,
   type CalendarDayDto,
   type CategoryDto,
   type CategoryStatDto,
   type CategoryType,
+  type InviteDto,
   type Paginated,
   type SummaryDto,
   type TransactionCreate,
@@ -17,6 +19,7 @@ import {
   type TxType,
 } from '@dongil/shared';
 import { api } from '@/lib/api';
+import { useBookStore } from '@/lib/book-store';
 
 export interface TxFilter {
   from?: string;
@@ -32,86 +35,179 @@ export const monthFilter = (month: string): TxFilter => {
   return { from: start.toISOString(), to: end.toISOString() };
 };
 
-/** 돈이 움직이면 영향을 받는 모든 캐시 무효화 */
+/** 가계부 하위 API 경로 */
+export const bookPath = (bookId: string, path: string) => `/books/${bookId}${path}`;
+
+/** 돈이 움직이면 영향을 받는 모든 캐시 무효화 (모든 가계부) */
 function invalidateMoney(qc: QueryClient) {
   for (const key of ['transactions', 'stats', 'budget', 'accounts']) qc.invalidateQueries({ queryKey: [key] });
 }
 
-// ---------- 조회 ----------
+// ---------- 가계부 ----------
 
-export const useAccounts = () =>
-  useQuery({ queryKey: ['accounts'], queryFn: () => api<AccountDto[]>('/accounts') });
+export const useBooks = () => useQuery({ queryKey: ['books'], queryFn: () => api<BookDto[]>('/books') });
 
-export const useCategories = () =>
-  useQuery({ queryKey: ['categories'], queryFn: () => api<CategoryDto[]>('/categories') });
+/** 현재 선택된 가계부. 저장된 선택이 없거나 목록에 없으면 개인 가계부 */
+export function useCurrentBook() {
+  const books = useBooks();
+  const selected = useBookStore((s) => s.bookId);
+  const list = books.data ?? [];
+  const book = list.find((b) => b.id === selected) ?? list.find((b) => b.type === 'PERSONAL') ?? list[0];
+  return { book, books };
+}
 
-export const useTransactions = (filter: TxFilter, pageSize = 30, enabled = true) =>
-  useInfiniteQuery({
-    queryKey: ['transactions', filter, pageSize],
-    enabled,
+/** 현재 가계부 id. 목록을 불러오기 전에는 undefined (그동안 하위 쿼리는 대기) */
+export const useBookId = () => useCurrentBook().book?.id;
+
+export function useCreateBook() {
+  const qc = useQueryClient();
+  const select = useBookStore((s) => s.select);
+  return useMutation({
+    mutationFn: (name: string) => api<BookDto>('/books', { method: 'POST', body: { name } }),
+    onSuccess: (book) => {
+      qc.invalidateQueries({ queryKey: ['books'] });
+      select(book.id);
+    },
+  });
+}
+
+export function useJoinBook() {
+  const qc = useQueryClient();
+  const select = useBookStore((s) => s.select);
+  return useMutation({
+    mutationFn: (code: string) => api<BookDto>('/books/join', { method: 'POST', body: { code } }),
+    onSuccess: (book) => {
+      qc.invalidateQueries({ queryKey: ['books'] });
+      select(book.id);
+    },
+  });
+}
+
+export function useRenameBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => api<BookDto>(`/books/${id}`, { method: 'PATCH', body: { name } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['books'] }),
+  });
+}
+
+export function useCreateInvite() {
+  return useMutation({
+    mutationFn: (bookId: string) => api<InviteDto>(`/books/${bookId}/invite`, { method: 'POST' }),
+  });
+}
+
+/** 나가기(본인) / 내보내기(OWNER) / 삭제 후에는 개인 가계부로 돌아간다 */
+export function useLeaveOrRemove() {
+  const qc = useQueryClient();
+  const reset = useBookStore((s) => s.reset);
+  return useMutation({
+    mutationFn: (args: { bookId: string; kind: 'delete' } | { bookId: string; kind: 'member'; userId: string }) =>
+      args.kind === 'delete'
+        ? api<void>(`/books/${args.bookId}`, { method: 'DELETE' })
+        : api<void>(`/books/${args.bookId}/members/${args.userId}`, { method: 'DELETE' }),
+    onSuccess: (_d, args) => {
+      if (args.kind === 'delete') reset();
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+// ---------- 조회 (현재 가계부) ----------
+
+export function useAccounts() {
+  const bookId = useBookId();
+  return useQuery({
+    queryKey: ['accounts', bookId],
+    queryFn: () => api<AccountDto[]>(bookPath(bookId!, '/accounts')),
+    enabled: !!bookId,
+  });
+}
+
+export function useCategories() {
+  const bookId = useBookId();
+  return useQuery({
+    queryKey: ['categories', bookId],
+    queryFn: () => api<CategoryDto[]>(bookPath(bookId!, '/categories')),
+    enabled: !!bookId,
+  });
+}
+
+export function useTransactions(filter: TxFilter, pageSize = 30, enabled = true) {
+  const bookId = useBookId();
+  return useInfiniteQuery({
+    queryKey: ['transactions', bookId, filter, pageSize],
+    enabled: enabled && !!bookId,
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
-      api<Paginated<TransactionDto>>('/transactions', { query: { ...filter, cursor: pageParam, limit: pageSize } }),
+      api<Paginated<TransactionDto>>(bookPath(bookId!, '/transactions'), {
+        query: { ...filter, cursor: pageParam, limit: pageSize },
+      }),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
+}
 
-export const useTransaction = (id: string | undefined) =>
-  useQuery({
-    queryKey: ['transactions', 'one', id],
-    queryFn: () => api<TransactionDto>(`/transactions/${id}`),
-    enabled: !!id,
+export function useTransaction(id: string | undefined) {
+  const bookId = useBookId();
+  return useQuery({
+    queryKey: ['transactions', bookId, 'one', id],
+    queryFn: () => api<TransactionDto>(bookPath(bookId!, `/transactions/${id}`)),
+    enabled: !!id && !!bookId,
   });
+}
 
-export const useSummary = (month: string) =>
-  useQuery({ queryKey: ['stats', 'summary', month], queryFn: () => api<SummaryDto>('/stats/summary', { query: { month } }) });
-
-export const useByCategory = (month: string) =>
-  useQuery({
-    queryKey: ['stats', 'by-category', month],
-    queryFn: () => api<CategoryStatDto[]>('/stats/by-category', { query: { month } }),
+function useStat<T>(name: string, query: Record<string, string | number>) {
+  const bookId = useBookId();
+  return useQuery({
+    queryKey: ['stats', bookId, name, query],
+    queryFn: () => api<T>(bookPath(bookId!, `/stats/${name}`), { query }),
+    enabled: !!bookId,
   });
+}
 
-export const useTrend = (month: string, months = 6) =>
-  useQuery({
-    queryKey: ['stats', 'trend', month, months],
-    queryFn: () => api<TrendPointDto[]>('/stats/trend', { query: { month, months } }),
+export const useSummary = (month: string) => useStat<SummaryDto>('summary', { month });
+export const useByCategory = (month: string) => useStat<CategoryStatDto[]>('by-category', { month });
+export const useTrend = (month: string, months = 6) => useStat<TrendPointDto[]>('trend', { month, months });
+export const useCalendar = (month: string) => useStat<CalendarDayDto[]>('calendar', { month });
+
+export function useBudget(month: string) {
+  const bookId = useBookId();
+  return useQuery({
+    queryKey: ['budget', bookId, month],
+    queryFn: () => api<BudgetDto>(bookPath(bookId!, '/budgets'), { query: { month } }),
+    enabled: !!bookId,
   });
+}
 
-export const useCalendar = (month: string) =>
-  useQuery({
-    queryKey: ['stats', 'calendar', month],
-    queryFn: () => api<CalendarDayDto[]>('/stats/calendar', { query: { month } }),
-  });
-
-export const useBudget = (month: string) =>
-  useQuery({ queryKey: ['budget', month], queryFn: () => api<BudgetDto>('/budgets', { query: { month } }) });
-
-// ---------- 변경 ----------
+// ---------- 변경 (현재 가계부) ----------
 
 export function useSaveTransaction() {
   const qc = useQueryClient();
+  const bookId = useBookId();
   return useMutation({
     mutationFn: ({ id, body }: { id?: string; body: TransactionCreate }) =>
       id
-        ? api<TransactionDto>(`/transactions/${id}`, { method: 'PUT', body })
-        : api<TransactionDto>('/transactions', { method: 'POST', body }),
+        ? api<TransactionDto>(bookPath(bookId!, `/transactions/${id}`), { method: 'PUT', body })
+        : api<TransactionDto>(bookPath(bookId!, '/transactions'), { method: 'POST', body }),
     onSuccess: () => invalidateMoney(qc),
   });
 }
 
 export function useDeleteTransaction() {
   const qc = useQueryClient();
+  const bookId = useBookId();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/transactions/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => api<void>(bookPath(bookId!, `/transactions/${id}`), { method: 'DELETE' }),
     onSuccess: () => invalidateMoney(qc),
   });
 }
 
 export function useSaveBudget() {
   const qc = useQueryClient();
+  const bookId = useBookId();
   return useMutation({
-    mutationFn: (body: BudgetUpsert) => api<BudgetDto>('/budgets', { method: 'PUT', body }),
-    onSuccess: (data) => qc.setQueryData(['budget', data.month], data),
+    mutationFn: (body: BudgetUpsert) => api<BudgetDto>(bookPath(bookId!, '/budgets'), { method: 'PUT', body }),
+    onSuccess: (data) => qc.setQueryData(['budget', bookId, data.month], data),
   });
 }
 
@@ -124,13 +220,14 @@ export interface AccountInput {
 
 export function useSaveAccount() {
   const qc = useQueryClient();
+  const bookId = useBookId();
   return useMutation({
     mutationFn: ({ id, body }: { id?: string; body: AccountInput }) => {
       if (id) {
         const { initialBalance: _ignored, ...rest } = body;
-        return api<AccountDto>(`/accounts/${id}`, { method: 'PATCH', body: rest });
+        return api<AccountDto>(bookPath(bookId!, `/accounts/${id}`), { method: 'PATCH', body: rest });
       }
-      return api<AccountDto>('/accounts', { method: 'POST', body });
+      return api<AccountDto>(bookPath(bookId!, '/accounts'), { method: 'POST', body });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
   });
@@ -138,8 +235,9 @@ export function useSaveAccount() {
 
 export function useDeleteAccount() {
   const qc = useQueryClient();
+  const bookId = useBookId();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/accounts/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => api<void>(bookPath(bookId!, `/accounts/${id}`), { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
   });
 }
@@ -153,13 +251,14 @@ export interface CategoryInput {
 
 export function useSaveCategory() {
   const qc = useQueryClient();
+  const bookId = useBookId();
   return useMutation({
     mutationFn: ({ id, body }: { id?: string; body: Partial<CategoryInput> & { sortOrder?: number } }) => {
       if (id) {
         const { type: _ignored, ...rest } = body;
-        return api<CategoryDto>(`/categories/${id}`, { method: 'PATCH', body: rest });
+        return api<CategoryDto>(bookPath(bookId!, `/categories/${id}`), { method: 'PATCH', body: rest });
       }
-      return api<CategoryDto>('/categories', { method: 'POST', body });
+      return api<CategoryDto>(bookPath(bookId!, '/categories'), { method: 'POST', body });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
@@ -167,8 +266,9 @@ export function useSaveCategory() {
 
 export function useDeleteCategory() {
   const qc = useQueryClient();
+  const bookId = useBookId();
   return useMutation({
-    mutationFn: (id: string) => api<void>(`/categories/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => api<void>(bookPath(bookId!, `/categories/${id}`), { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
   });
 }

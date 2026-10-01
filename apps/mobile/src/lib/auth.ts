@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AuthResponse, UserDto } from '@dongil/shared';
 import { api, ApiError, setOnAuthExpired, tokenStore } from './api';
+import { useBookStore } from './book-store';
 import { queryClient } from './query-client';
 
 type Status = 'loading' | 'authed' | 'guest';
@@ -53,6 +54,7 @@ export const useAuth = create<AuthState>((set) => {
       if (t) await api('/auth/logout', { method: 'POST', body: { refreshToken: t.refreshToken } }).catch(() => {});
       await tokenStore.set(null);
       queryClient.clear();
+      useBookStore.getState().reset();
       set({ status: 'guest', user: null });
     },
   };

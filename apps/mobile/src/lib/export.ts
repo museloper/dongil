@@ -4,10 +4,12 @@ import { Platform } from 'react-native';
 import { monthRange } from '@dongil/shared';
 import { api } from './api';
 
-/** 해당 월 거래를 CSV 로 받아 공유 시트(네이티브) 또는 다운로드(웹)로 내보낸다 */
-export async function exportMonthCsv(month: string) {
+/** 가계부의 해당 월 거래를 CSV 로 받아 공유 시트(네이티브) 또는 다운로드(웹)로 내보낸다 */
+export async function exportMonthCsv(bookId: string, month: string) {
   const { start, end } = monthRange(month);
-  const csv = await api<string>('/export/csv', { query: { from: start.toISOString(), to: end.toISOString() } });
+  const csv = await api<string>(`/books/${bookId}/export/csv`, {
+    query: { from: start.toISOString(), to: end.toISOString() },
+  });
   const name = `dongil-${month}.csv`;
 
   if (Platform.OS === 'web') {

@@ -6,7 +6,7 @@ import { currentMonth, formatWon, shiftMonth, type BudgetDto, type CategoryDto }
 import { CategoryIcon } from '@/components/category-icon';
 import { MoneyInput } from '@/components/money-input';
 import { AppText, Button, Card, IconButton, Loading, haptic } from '@/components/ui';
-import { useBudget, useCategories, useSaveBudget } from '@/features/queries';
+import { bookPath, useBookId, useBudget, useCategories, useSaveBudget } from '@/features/queries';
 import { closeModal } from '@/lib/nav';
 import { api } from '@/lib/api';
 import { formatMonthLabel } from '@/lib/date';
@@ -36,6 +36,7 @@ function BudgetEditor({ month, initial, categories }: { month: string; initial: 
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const save = useSaveBudget();
+  const bookId = useBookId();
   const [state, setState] = useState(() => toState(initial));
   const [error, setError] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
@@ -45,7 +46,7 @@ function BudgetEditor({ month, initial, categories }: { month: string; initial: 
   const copyPrev = async () => {
     setCopying(true);
     try {
-      const prev = await api<BudgetDto>('/budgets', { query: { month: shiftMonth(month, -1) } });
+      const prev = await api<BudgetDto>(bookPath(bookId!, '/budgets'), { query: { month: shiftMonth(month, -1) } });
       if (!prev.items.length) setError('지난달 예산이 없어요');
       else {
         setState(toState(prev));
