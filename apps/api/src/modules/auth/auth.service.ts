@@ -6,7 +6,7 @@ import type { User } from '@prisma/client';
 import type { AuthResponse, UserDto } from '@dongil/shared';
 import { PrismaService } from '../../common/prisma.module';
 import { accessSecret } from '../../common/auth.guard';
-import { DEFAULT_CATEGORIES } from './default-categories';
+import { createBookWithDefaults } from '../books/books.service';
 
 const ACCESS_TTL = '15m';
 const REFRESH_TTL_MS = 14 * 24 * 60 * 60 * 1000;
@@ -33,14 +33,11 @@ export class AuthService {
       throw new ConflictException('이미 가입된 이메일입니다');
     }
     const passwordHash = await bcrypt.hash(input.password, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        nickname: input.nickname,
-        categories: { create: DEFAULT_CATEGORIES.map((c, i) => ({ ...c, sortOrder: i })) },
-        accounts: { create: [{ name: '현금', type: 'CASH', color: '#20C997' }] },
-      },
+    // 가입과 동시에 개인 가계부(기본 카테고리 + 현금 계좌)를 만든다
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({ data: { email, passwordHash, nickname: input.nickname } });
+      await createBookWithDefaults(tx, { userId: created.id, name: '내 가계부', type: 'PERSONAL' });
+      return created;
     });
     return this.issue(user);
   }
