@@ -1,4 +1,4 @@
-import type { AccountType, CategoryType, TxType } from './schemas';
+import type { AccountType, BookType, CategoryType, MemberRole, TxType } from './schemas';
 
 export interface AuthTokens {
   accessToken: string;
@@ -42,7 +42,28 @@ export interface TransactionDto {
   account: AccountRef;
   toAccount: AccountRef | null;
   category: CategoryRef | null;
+  /** 거래를 기록한 사람 (공유 가계부에서 표시) */
+  author: { id: string; nickname: string };
 }
+
+export interface BookMemberDto {
+  userId: string;
+  nickname: string;
+  role: MemberRole;
+}
+export interface BookDto {
+  id: string;
+  name: string;
+  type: BookType;
+  /** 내 역할 */
+  role: MemberRole;
+  members: BookMemberDto[];
+}
+export interface InviteDto {
+  code: string;
+  expiresAt: string;
+}
+
 export interface Paginated<T> {
   items: T[];
   nextCursor: string | null;

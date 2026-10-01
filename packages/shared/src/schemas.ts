@@ -23,6 +23,30 @@ export const LoginSchema = z.object({
 });
 export const RefreshSchema = z.object({ refreshToken: z.string().min(1) });
 
+// ---------- 가계부(공유) ----------
+
+export const BookTypeEnum = z.enum(['PERSONAL', 'SHARED']);
+export const MemberRoleEnum = z.enum(['OWNER', 'MEMBER']);
+export type BookType = z.infer<typeof BookTypeEnum>;
+export type MemberRole = z.infer<typeof MemberRoleEnum>;
+
+/** 공유 가계부 최대 인원 */
+export const BOOK_MAX_MEMBERS = 2;
+/** 초대 코드: 헷갈리는 문자(0,O,1,I)를 뺀 대문자+숫자 6자리 */
+export const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export const INVITE_CODE_LENGTH = 6;
+
+const bookName = z.string().trim().min(1, '가계부 이름을 입력하세요').max(20, '20자 이내로 입력하세요');
+export const BookCreateSchema = z.object({ name: bookName });
+export const BookUpdateSchema = z.object({ name: bookName });
+export const JoinBookSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .transform((s) => s.toUpperCase())
+    .pipe(z.string().regex(/^[A-Z2-9]{6}$/, '초대 코드 6자리를 정확히 입력하세요')),
+});
+
 export const AccountCreateSchema = z.object({
   name: z.string().min(1).max(30),
   type: AccountTypeEnum,
