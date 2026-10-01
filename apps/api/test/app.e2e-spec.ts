@@ -1,10 +1,11 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import type { AccountDto, AuthResponse, CategoryDto } from '@dongil/shared';
+import type { AccountDto, AuthResponse, BookDto, CategoryDto } from '@dongil/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { PrismaService } from '../src/common/prisma.module';
+import { deleteUsers } from './cleanup';
 
 describe('Dongil API (e2e)', () => {
   let app: INestApplication;
@@ -14,10 +15,13 @@ describe('Dongil API (e2e)', () => {
   let bank: AccountDto;
   let food: CategoryDto;
   let salary: CategoryDto;
+  let bookId: string;
   const email = `e2e-${Date.now()}@test.local`;
 
   const api = () => request(app.getHttpServer());
   const authed = (req: request.Test) => req.set('Authorization', `Bearer ${auth.accessToken}`);
+  /** 내 개인 가계부 하위 경로 */
+  const b = (path: string) => `/api/v1/books/${bookId}${path}`;
 
   beforeAll(async () => {
     const mod = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -28,7 +32,7 @@ describe('Dongil API (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({ where: { email } });
+    await deleteUsers(prisma, [email, `other-${email}`]);
     await app.close();
   });
 
@@ -38,12 +42,16 @@ describe('Dongil API (e2e)', () => {
     auth = res.body;
     expect(auth.accessToken).toBeTruthy();
 
-    const cats = await authed(api().get('/api/v1/categories'));
+    const books = (await authed(api().get('/api/v1/books'))).body as BookDto[];
+    expect(books).toEqual([expect.objectContaining({ name: '내 가계부', type: 'PERSONAL', role: 'OWNER' })]);
+    bookId = books[0].id;
+
+    const cats = await authed(api().get(b('/categories')));
     expect(cats.body.length).toBeGreaterThan(5);
     food = cats.body.find((c: CategoryDto) => c.name === '식비');
     salary = cats.body.find((c: CategoryDto) => c.name === '월급');
 
-    const accs = await authed(api().get('/api/v1/accounts'));
+    const accs = await authed(api().get(b('/accounts')));
     cash = accs.body[0];
     expect(cash.name).toBe('현금');
   });
@@ -56,7 +64,7 @@ describe('Dongil API (e2e)', () => {
   });
 
   it('토큰 없이 접근하면 401', async () => {
-    expect((await api().get('/api/v1/accounts')).status).toBe(401);
+    expect((await api().get(b('/accounts'))).status).toBe(401);
   });
 
   it('refresh 토큰은 회전되며 재사용할 수 없다', async () => {
@@ -68,74 +76,74 @@ describe('Dongil API (e2e)', () => {
   });
 
   it('거래 생성/수정/삭제에 따라 계좌 잔액이 정확히 맞는다', async () => {
-    bank = (await authed(api().post('/api/v1/accounts')).send({ name: '월급통장', type: 'BANK', initialBalance: 100000 })).body;
+    bank = (await authed(api().post(b('/accounts'))).send({ name: '월급통장', type: 'BANK', initialBalance: 100000 })).body;
 
-    const income = await authed(api().post('/api/v1/transactions')).send({
+    const income = await authed(api().post(b('/transactions'))).send({
       type: 'INCOME', amount: 3000000, accountId: bank.id, categoryId: salary.id, occurredAt: '2026-09-25T09:00:00+09:00',
     });
     expect(income.status).toBe(201);
 
-    const lunch = await authed(api().post('/api/v1/transactions')).send({
+    const lunch = await authed(api().post(b('/transactions'))).send({
       type: 'EXPENSE', amount: 12000, accountId: bank.id, categoryId: food.id, memo: '점심 김치찌개', occurredAt: '2026-09-26T12:30:00+09:00',
     });
     expect(lunch.status).toBe(201);
 
-    const transfer = await authed(api().post('/api/v1/transactions')).send({
+    const transfer = await authed(api().post(b('/transactions'))).send({
       type: 'TRANSFER', amount: 50000, accountId: bank.id, toAccountId: cash.id, occurredAt: '2026-09-27T10:00:00+09:00',
     });
     expect(transfer.status).toBe(201);
 
-    let accs: AccountDto[] = (await authed(api().get('/api/v1/accounts'))).body;
+    let accs: AccountDto[] = (await authed(api().get(b('/accounts')))).body;
     expect(accs.find((a) => a.id === bank.id)!.balance).toBe(100000 + 3000000 - 12000 - 50000);
     expect(accs.find((a) => a.id === cash.id)!.balance).toBe(50000);
 
     // 점심값 수정 12,000 -> 15,000 & 현금 결제로 변경
-    const upd = await authed(api().put(`/api/v1/transactions/${lunch.body.id}`)).send({
+    const upd = await authed(api().put(b(`/transactions/${lunch.body.id}`))).send({
       type: 'EXPENSE', amount: 15000, accountId: cash.id, categoryId: food.id, memo: '점심 김치찌개', occurredAt: '2026-09-26T12:30:00+09:00',
     });
     expect(upd.status).toBe(200);
-    accs = (await authed(api().get('/api/v1/accounts'))).body;
+    accs = (await authed(api().get(b('/accounts')))).body;
     expect(accs.find((a) => a.id === bank.id)!.balance).toBe(100000 + 3000000 - 50000);
     expect(accs.find((a) => a.id === cash.id)!.balance).toBe(50000 - 15000);
 
     // 이체 삭제 → 원복
-    expect((await authed(api().delete(`/api/v1/transactions/${transfer.body.id}`))).status).toBe(204);
-    accs = (await authed(api().get('/api/v1/accounts'))).body;
+    expect((await authed(api().delete(b(`/transactions/${transfer.body.id}`)))).status).toBe(204);
+    accs = (await authed(api().get(b('/accounts')))).body;
     expect(accs.find((a) => a.id === bank.id)!.balance).toBe(100000 + 3000000);
     expect(accs.find((a) => a.id === cash.id)!.balance).toBe(-15000);
   });
 
   it('검증 실패: 카테고리 종류 불일치, 같은 계좌 이체', async () => {
-    const wrongCat = await authed(api().post('/api/v1/transactions')).send({
+    const wrongCat = await authed(api().post(b('/transactions'))).send({
       type: 'EXPENSE', amount: 1000, accountId: cash.id, categoryId: salary.id, occurredAt: '2026-09-26T12:00:00+09:00',
     });
     expect(wrongCat.status).toBe(400);
-    const selfTransfer = await authed(api().post('/api/v1/transactions')).send({
+    const selfTransfer = await authed(api().post(b('/transactions'))).send({
       type: 'TRANSFER', amount: 1000, accountId: cash.id, toAccountId: cash.id, occurredAt: '2026-09-26T12:00:00+09:00',
     });
     expect(selfTransfer.status).toBe(400);
   });
 
   it('KST 월 경계: 10/1 00:30 KST 거래는 10월로 집계된다', async () => {
-    await authed(api().post('/api/v1/transactions')).send({
+    await authed(api().post(b('/transactions'))).send({
       type: 'EXPENSE', amount: 7000, accountId: cash.id, categoryId: food.id, occurredAt: '2026-10-01T00:30:00+09:00',
     });
-    const sep = (await authed(api().get('/api/v1/stats/summary?month=2026-09'))).body;
+    const sep = (await authed(api().get(b('/stats/summary?month=2026-09')))).body;
     expect(sep.income).toBe(3000000);
     expect(sep.expense).toBe(15000);
-    const oct = (await authed(api().get('/api/v1/stats/summary?month=2026-10'))).body;
+    const oct = (await authed(api().get(b('/stats/summary?month=2026-10')))).body;
     expect(oct.expense).toBe(7000);
   });
 
   it('통계: 카테고리별, 추이, 캘린더', async () => {
-    const byCat = (await authed(api().get('/api/v1/stats/by-category?month=2026-09'))).body;
+    const byCat = (await authed(api().get(b('/stats/by-category?month=2026-09')))).body;
     expect(byCat).toEqual([expect.objectContaining({ name: '식비', amount: 15000, ratio: 1 })]);
 
-    const trend = (await authed(api().get('/api/v1/stats/trend?month=2026-10&months=3'))).body;
+    const trend = (await authed(api().get(b('/stats/trend?month=2026-10&months=3')))).body;
     expect(trend.map((t: { month: string }) => t.month)).toEqual(['2026-08', '2026-09', '2026-10']);
     expect(trend[1]).toEqual({ month: '2026-09', income: 3000000, expense: 15000 });
 
-    const cal = (await authed(api().get('/api/v1/stats/calendar?month=2026-09'))).body;
+    const cal = (await authed(api().get(b('/stats/calendar?month=2026-09')))).body;
     expect(cal).toEqual([
       { date: '2026-09-25', income: 3000000, expense: 0 },
       { date: '2026-09-26', income: 0, expense: 15000 },
@@ -143,7 +151,7 @@ describe('Dongil API (e2e)', () => {
   });
 
   it('예산: 전체/카테고리 예산과 사용액', async () => {
-    const res = await authed(api().put('/api/v1/budgets')).send({
+    const res = await authed(api().put(b('/budgets'))).send({
       month: '2026-09',
       items: [{ categoryId: null, amount: 1000000 }, { categoryId: food.id, amount: 20000 }],
     });
@@ -153,37 +161,41 @@ describe('Dongil API (e2e)', () => {
   });
 
   it('내역: 검색, 페이지네이션', async () => {
-    const search = (await authed(api().get('/api/v1/transactions?q=김치'))).body;
+    const search = (await authed(api().get(b('/transactions?q=김치')))).body;
     expect(search.items).toHaveLength(1);
 
-    const p1 = (await authed(api().get('/api/v1/transactions?limit=2'))).body;
+    const p1 = (await authed(api().get(b('/transactions?limit=2')))).body;
     expect(p1.items).toHaveLength(2);
     expect(p1.nextCursor).toBeTruthy();
-    const p2 = (await authed(api().get(`/api/v1/transactions?limit=2&cursor=${p1.nextCursor}`))).body;
+    const p2 = (await authed(api().get(b(`/transactions?limit=2&cursor=${p1.nextCursor}`)))).body;
     expect(p2.items).toHaveLength(1);
     expect(p2.nextCursor).toBeNull();
   });
 
   it('CSV 내보내기', async () => {
     const res = await authed(
-      api().get('/api/v1/export/csv').query({ from: '2026-09-01T00:00:00+09:00', to: '2026-10-01T00:00:00+09:00' }),
+      api().get(b('/export/csv')).query({ from: '2026-09-01T00:00:00+09:00', to: '2026-10-01T00:00:00+09:00' }),
     );
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/csv');
     const lines = res.text.replace('﻿', '').split('\r\n');
-    expect(lines[0]).toBe('날짜,구분,카테고리,금액,계좌,받는계좌,메모');
+    expect(lines[0]).toBe('날짜,구분,카테고리,금액,계좌,받는계좌,메모,작성자');
     expect(lines).toHaveLength(3);
   });
 
-  it('다른 사용자의 데이터에는 접근할 수 없다', async () => {
+  it('다른 사용자의 가계부에는 접근할 수 없다', async () => {
     const other = (
       await api().post('/api/v1/auth/signup').send({ email: `other-${email}`, password: 'password123', nickname: '남' })
     ).body as AuthResponse;
-    const res = await api()
-      .post('/api/v1/transactions')
-      .set('Authorization', `Bearer ${other.accessToken}`)
-      .send({ type: 'EXPENSE', amount: 1, accountId: cash.id, categoryId: food.id, occurredAt: '2026-09-26T12:00:00+09:00' });
+    const asOther = (req: request.Test) => req.set('Authorization', `Bearer ${other.accessToken}`);
+    const otherBook = ((await asOther(api().get('/api/v1/books'))).body as BookDto[])[0];
+
+    // 내 가계부 경로 자체에 접근 불가 (존재 여부도 숨김)
+    expect((await asOther(api().get(b('/accounts')))).status).toBe(404);
+    // 자기 가계부에 내 계좌/카테고리 id 를 넣어도 거부
+    const res = await asOther(api().post(`/api/v1/books/${otherBook.id}/transactions`)).send({
+      type: 'EXPENSE', amount: 1, accountId: cash.id, categoryId: food.id, occurredAt: '2026-09-26T12:00:00+09:00',
+    });
     expect(res.status).toBe(400);
-    await prisma.user.deleteMany({ where: { email: `other-${email}` } });
   });
 });
