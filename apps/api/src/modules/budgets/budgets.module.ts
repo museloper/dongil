@@ -1,9 +1,9 @@
-import { BadRequestException, Body, Controller, Get, Injectable, Module, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Injectable, Module, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { BudgetUpsertSchema, MonthQuerySchema, monthRange, type BudgetDto, type BudgetUpsert } from '@dongil/shared';
 import { z } from 'zod';
 import { PrismaService } from '../../common/prisma.module';
-import { UserId } from '../../common/auth.guard';
+import { BookAccessGuard, BookId } from '../../common/book-access.guard';
 import { ZodPipe } from '../../common/zod.pipe';
 import { StatsModule } from '../stats/stats.module';
 import { StatsService } from '../stats/stats.service';
@@ -15,12 +15,12 @@ export class BudgetsService {
     private readonly stats: StatsService,
   ) {}
 
-  async get(userId: string, month: string): Promise<BudgetDto> {
+  async get(bookId: string, month: string): Promise<BudgetDto> {
     const { start, end } = monthRange(month);
     const [budgets, byCat, totals] = await Promise.all([
-      this.prisma.budget.findMany({ where: { userId, month }, include: { category: true } }),
-      this.stats.expenseByCategory(userId, start, end),
-      this.stats.totals(userId, start, end),
+      this.prisma.budget.findMany({ where: { bookId, month }, include: { category: true } }),
+      this.stats.expenseByCategory(bookId, start, end),
+      this.stats.totals(bookId, start, end),
     ]);
 
     const items = budgets
@@ -44,38 +44,39 @@ export class BudgetsService {
   }
 
   /** 해당 월 예산을 통째로 교체 */
-  async upsert(userId: string, input: BudgetUpsert): Promise<BudgetDto> {
+  async upsert(bookId: string, input: BudgetUpsert): Promise<BudgetDto> {
     const catIds = input.items.map((i) => i.categoryId).filter((v): v is string => !!v);
     if (new Set(input.items.map((i) => i.categoryId)).size !== input.items.length) {
       throw new BadRequestException('같은 카테고리 예산이 중복되었습니다');
     }
-    const owned = await this.prisma.category.count({ where: { userId, type: 'EXPENSE', id: { in: catIds } } });
+    const owned = await this.prisma.category.count({ where: { bookId, type: 'EXPENSE', id: { in: catIds } } });
     if (owned !== catIds.length) throw new BadRequestException('지출 카테고리만 예산을 설정할 수 있습니다');
 
     await this.prisma.$transaction([
-      this.prisma.budget.deleteMany({ where: { userId, month: input.month } }),
+      this.prisma.budget.deleteMany({ where: { bookId, month: input.month } }),
       this.prisma.budget.createMany({
-        data: input.items.map((i) => ({ userId, month: input.month, categoryId: i.categoryId, amount: BigInt(i.amount) })),
+        data: input.items.map((i) => ({ bookId, month: input.month, categoryId: i.categoryId, amount: BigInt(i.amount) })),
       }),
     ]);
-    return this.get(userId, input.month);
+    return this.get(bookId, input.month);
   }
 }
 
 @ApiTags('budgets')
 @ApiBearerAuth()
-@Controller('budgets')
+@Controller('books/:bookId/budgets')
+@UseGuards(BookAccessGuard)
 export class BudgetsController {
   constructor(private readonly svc: BudgetsService) {}
 
   @Get()
-  get(@UserId() userId: string, @Query(new ZodPipe(MonthQuerySchema)) q: z.infer<typeof MonthQuerySchema>) {
-    return this.svc.get(userId, q.month);
+  get(@BookId() bookId: string, @Query(new ZodPipe(MonthQuerySchema)) q: z.infer<typeof MonthQuerySchema>) {
+    return this.svc.get(bookId, q.month);
   }
 
   @Put()
-  upsert(@UserId() userId: string, @Body(new ZodPipe(BudgetUpsertSchema)) body: BudgetUpsert) {
-    return this.svc.upsert(userId, body);
+  upsert(@BookId() bookId: string, @Body(new ZodPipe(BudgetUpsertSchema)) body: BudgetUpsert) {
+    return this.svc.upsert(bookId, body);
   }
 }
 

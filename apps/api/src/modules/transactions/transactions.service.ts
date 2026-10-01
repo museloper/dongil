@@ -11,9 +11,9 @@ type Tx = Prisma.TransactionClient;
 export class TransactionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(userId: string, q: TransactionQuery): Promise<Paginated<TransactionDto>> {
+  async list(bookId: string, q: TransactionQuery): Promise<Paginated<TransactionDto>> {
     const where: Prisma.TransactionWhereInput = {
-      userId,
+      bookId,
       type: q.type,
       categoryId: q.categoryId,
       occurredAt: { gte: q.from ? new Date(q.from) : undefined, lt: q.to ? new Date(q.to) : undefined },
@@ -43,50 +43,51 @@ export class TransactionsService {
     return { items: items.map(toTransactionDto), nextCursor: hasMore ? items[items.length - 1].id : null };
   }
 
-  async get(userId: string, id: string): Promise<TransactionDto> {
-    const row = await this.prisma.transaction.findFirst({ where: { id, userId }, include: txInclude });
+  async get(bookId: string, id: string): Promise<TransactionDto> {
+    const row = await this.prisma.transaction.findFirst({ where: { id, bookId }, include: txInclude });
     if (!row) throw new NotFoundException('거래를 찾을 수 없습니다');
     return toTransactionDto(row);
   }
 
-  async create(userId: string, input: TransactionCreate): Promise<TransactionDto> {
+  /** authorId: 기록한 사람. 수정할 때는 원래 작성자를 유지한다 */
+  async create(bookId: string, authorId: string, input: TransactionCreate): Promise<TransactionDto> {
     return this.prisma.$transaction(async (tx) => {
-      const data = await this.normalize(tx, userId, input);
-      const row = await tx.transaction.create({ data: { ...data, userId } });
+      const data = await this.normalize(tx, bookId, input);
+      const row = await tx.transaction.create({ data: { ...data, bookId, createdById: authorId } });
       await this.applyDeltas(tx, balanceDeltas(data));
       return toTransactionDto(await this.reload(tx, row.id));
     });
   }
 
-  async update(userId: string, id: string, input: TransactionCreate): Promise<TransactionDto> {
+  async update(bookId: string, id: string, input: TransactionCreate): Promise<TransactionDto> {
     return this.prisma.$transaction(async (tx) => {
-      const prev = await tx.transaction.findFirst({ where: { id, userId } });
+      const prev = await tx.transaction.findFirst({ where: { id, bookId } });
       if (!prev) throw new NotFoundException('거래를 찾을 수 없습니다');
-      const data = await this.normalize(tx, userId, input);
+      const data = await this.normalize(tx, bookId, input);
       await tx.transaction.update({ where: { id }, data });
       await this.applyDeltas(tx, mergeDeltas(balanceDeltas(prev, -1), balanceDeltas(data)));
       return toTransactionDto(await this.reload(tx, id));
     });
   }
 
-  async remove(userId: string, id: string): Promise<void> {
+  async remove(bookId: string, id: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const prev = await tx.transaction.findFirst({ where: { id, userId } });
+      const prev = await tx.transaction.findFirst({ where: { id, bookId } });
       if (!prev) throw new NotFoundException('거래를 찾을 수 없습니다');
       await tx.transaction.delete({ where: { id } });
       await this.applyDeltas(tx, balanceDeltas(prev, -1));
     });
   }
 
-  /** 입력값의 계좌/카테고리가 본인 소유인지, 거래 종류와 카테고리 종류가 맞는지 확인 */
-  private async normalize(tx: Tx, userId: string, input: TransactionCreate) {
+  /** 입력값의 계좌/카테고리가 이 가계부 것인지, 거래 종류와 카테고리 종류가 맞는지 확인 */
+  private async normalize(tx: Tx, bookId: string, input: TransactionCreate) {
     const accountIds = [input.accountId, ...(input.type === 'TRANSFER' && input.toAccountId ? [input.toAccountId] : [])];
-    const owned = await tx.account.count({ where: { userId, archived: false, id: { in: accountIds } } });
+    const owned = await tx.account.count({ where: { bookId, archived: false, id: { in: accountIds } } });
     if (owned !== accountIds.length) throw new BadRequestException('계좌를 찾을 수 없습니다');
 
     let categoryId: string | null = null;
     if (input.type !== 'TRANSFER') {
-      const cat = await tx.category.findFirst({ where: { id: input.categoryId!, userId } });
+      const cat = await tx.category.findFirst({ where: { id: input.categoryId!, bookId } });
       if (!cat) throw new BadRequestException('카테고리를 찾을 수 없습니다');
       if (cat.type !== input.type) throw new BadRequestException('거래 종류와 카테고리 종류가 맞지 않습니다');
       categoryId = cat.id;

@@ -1,8 +1,8 @@
-import { Controller, Get, Module, Query } from '@nestjs/common';
+import { Controller, Get, Module, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MonthQuerySchema, TrendQuerySchema } from '@dongil/shared';
 import { z } from 'zod';
-import { UserId } from '../../common/auth.guard';
+import { BookAccessGuard, BookId } from '../../common/book-access.guard';
 import { ZodPipe } from '../../common/zod.pipe';
 import { StatsService } from './stats.service';
 
@@ -10,28 +10,29 @@ type MonthQ = z.infer<typeof MonthQuerySchema>;
 
 @ApiTags('stats')
 @ApiBearerAuth()
-@Controller('stats')
+@Controller('books/:bookId/stats')
+@UseGuards(BookAccessGuard)
 export class StatsController {
   constructor(private readonly svc: StatsService) {}
 
   @Get('summary')
-  summary(@UserId() userId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
-    return this.svc.summary(userId, q.month);
+  summary(@BookId() bookId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
+    return this.svc.summary(bookId, q.month);
   }
 
   @Get('by-category')
-  byCategory(@UserId() userId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
-    return this.svc.byCategory(userId, q.month);
+  byCategory(@BookId() bookId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
+    return this.svc.byCategory(bookId, q.month);
   }
 
   @Get('trend')
-  trend(@UserId() userId: string, @Query(new ZodPipe(TrendQuerySchema)) q: z.infer<typeof TrendQuerySchema>) {
-    return this.svc.trend(userId, q.month, q.months);
+  trend(@BookId() bookId: string, @Query(new ZodPipe(TrendQuerySchema)) q: z.infer<typeof TrendQuerySchema>) {
+    return this.svc.trend(bookId, q.month, q.months);
   }
 
   @Get('calendar')
-  calendar(@UserId() userId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
-    return this.svc.calendar(userId, q.month);
+  calendar(@BookId() bookId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
+    return this.svc.calendar(bookId, q.month);
   }
 }
 
