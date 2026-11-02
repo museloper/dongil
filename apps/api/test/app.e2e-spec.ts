@@ -150,6 +150,27 @@ describe('Dongil API (e2e)', () => {
     ]);
   });
 
+  it('통계: 계좌별 조회와 이체 합계 (이체는 수입·지출이 아니다)', async () => {
+    const transfer = await authed(api().post(b('/transactions'))).send({
+      type: 'TRANSFER', amount: 100000, accountId: bank.id, toAccountId: cash.id, occurredAt: '2026-09-28T10:00:00+09:00',
+    });
+    expect(transfer.status).toBe(201);
+
+    const all = (await authed(api().get(b('/stats/summary?month=2026-09')))).body;
+    expect(all).toMatchObject({ income: 3000000, expense: 15000, transferIn: 100000, transferOut: 100000 });
+
+    const bankSum = (await authed(api().get(b(`/stats/summary?month=2026-09&accountId=${bank.id}`)))).body;
+    expect(bankSum).toMatchObject({ income: 3000000, expense: 0, transferIn: 0, transferOut: 100000 });
+    const cashSum = (await authed(api().get(b(`/stats/summary?month=2026-09&accountId=${cash.id}`)))).body;
+    expect(cashSum).toMatchObject({ income: 0, expense: 15000, transferIn: 100000, transferOut: 0 });
+
+    expect((await authed(api().get(b(`/stats/by-category?month=2026-09&accountId=${bank.id}`)))).body).toEqual([]);
+    const cashTrend = (await authed(api().get(b(`/stats/trend?month=2026-09&months=1&accountId=${cash.id}`)))).body;
+    expect(cashTrend).toEqual([{ month: '2026-09', income: 0, expense: 15000 }]);
+
+    expect((await authed(api().delete(b(`/transactions/${transfer.body.id}`)))).status).toBe(204);
+  });
+
   it('예산: 전체/카테고리 예산과 사용액', async () => {
     const res = await authed(api().put(b('/budgets'))).send({
       month: '2026-09',

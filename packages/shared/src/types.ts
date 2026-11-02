@@ -91,6 +91,12 @@ export interface SummaryDto {
   prevExpense: number;
   /** 전월 대비 지출 증감률 (0.12 = +12%), 전월 지출 0이면 null */
   expenseChangeRate: number | null;
+  /**
+   * 계좌 간 이체. 수입·지출에 들어가지 않는다.
+   * 계좌별 조회면 그 계좌로 들어온/나간 금액, 가계부 전체면 둘 다 이체 총액(가계부 안에서 옮긴 돈)
+   */
+  transferIn: number;
+  transferOut: number;
 }
 export interface CategoryStatDto {
   categoryId: string;

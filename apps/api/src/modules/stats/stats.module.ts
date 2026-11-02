@@ -1,12 +1,12 @@
 import { Controller, Get, Module, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { MonthQuerySchema, TrendQuerySchema } from '@dongil/shared';
+import { StatsQuerySchema, StatsTrendQuerySchema } from '@dongil/shared';
 import { z } from 'zod';
 import { BookAccessGuard, BookId } from '../../common/book-access.guard';
 import { ZodPipe } from '../../common/zod.pipe';
 import { StatsService } from './stats.service';
 
-type MonthQ = z.infer<typeof MonthQuerySchema>;
+type StatsQ = z.infer<typeof StatsQuerySchema>;
 
 @ApiTags('stats')
 @ApiBearerAuth()
@@ -16,23 +16,23 @@ export class StatsController {
   constructor(private readonly svc: StatsService) {}
 
   @Get('summary')
-  summary(@BookId() bookId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
-    return this.svc.summary(bookId, q.month);
+  summary(@BookId() bookId: string, @Query(new ZodPipe(StatsQuerySchema)) q: StatsQ) {
+    return this.svc.summary(bookId, q.month, q.accountId);
   }
 
   @Get('by-category')
-  byCategory(@BookId() bookId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
-    return this.svc.byCategory(bookId, q.month);
+  byCategory(@BookId() bookId: string, @Query(new ZodPipe(StatsQuerySchema)) q: StatsQ) {
+    return this.svc.byCategory(bookId, q.month, q.accountId);
   }
 
   @Get('trend')
-  trend(@BookId() bookId: string, @Query(new ZodPipe(TrendQuerySchema)) q: z.infer<typeof TrendQuerySchema>) {
-    return this.svc.trend(bookId, q.month, q.months);
+  trend(@BookId() bookId: string, @Query(new ZodPipe(StatsTrendQuerySchema)) q: z.infer<typeof StatsTrendQuerySchema>) {
+    return this.svc.trend(bookId, q.month, q.months, q.accountId);
   }
 
   @Get('calendar')
-  calendar(@BookId() bookId: string, @Query(new ZodPipe(MonthQuerySchema)) q: MonthQ) {
-    return this.svc.calendar(bookId, q.month);
+  calendar(@BookId() bookId: string, @Query(new ZodPipe(StatsQuerySchema)) q: StatsQ) {
+    return this.svc.calendar(bookId, q.month, q.accountId);
   }
 }
 
