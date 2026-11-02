@@ -92,6 +92,7 @@ const ICONS = {
   business: io.business,
   briefcase: io.briefcase,
   'ellipsis-horizontal': io.ellipsisHorizontal,
+  'ellipsis-vertical': io.ellipsisVertical,
   happy: io.happy,
 } as const;
 

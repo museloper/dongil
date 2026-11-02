@@ -16,6 +16,7 @@ interface InstallState {
   promptEvent: BeforeInstallPromptEvent | null;
   /** iOS 사파리는 설치 이벤트가 없어 "공유 → 홈 화면에 추가" 를 안내해야 한다 */
   isIos: boolean;
+  isAndroid: boolean;
   install: () => Promise<void>;
 }
 
@@ -23,6 +24,7 @@ export const useInstall = create<InstallState>((set, get) => ({
   installed: standalone(),
   promptEvent: null,
   isIos: /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+  isAndroid: /android/i.test(navigator.userAgent),
   install: async () => {
     const e = get().promptEvent;
     if (!e) return;

@@ -2,6 +2,7 @@ import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router';
 import { ConfirmHost, ToastHost } from '@/components/dialog';
+import { InstallGate } from '@/components/install-gate';
 import { TabBar } from '@/components/screen';
 import { Loading } from '@/components/ui';
 import { UpdatePrompt } from '@/components/update-prompt';
@@ -59,35 +60,37 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="app">
-        {status === 'loading' ? (
-          <Loading />
-        ) : (
-          <BrowserRouter>
-            <Routes>
-              <Route element={<Authed />}>
-                <Route element={<TabsLayout />}>
-                  <Route index element={<HomePage />} />
-                  <Route path="transactions" element={<TransactionsPage />} />
-                  <Route path="stats" element={<StatsPage />} />
-                  <Route path="budget" element={<BudgetPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
+        <InstallGate>
+          {status === 'loading' ? (
+            <Loading />
+          ) : (
+            <BrowserRouter>
+              <Routes>
+                <Route element={<Authed />}>
+                  <Route element={<TabsLayout />}>
+                    <Route index element={<HomePage />} />
+                    <Route path="transactions" element={<TransactionsPage />} />
+                    <Route path="stats" element={<StatsPage />} />
+                    <Route path="budget" element={<BudgetPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                  </Route>
+                  <Route path="transaction/new" element={<NewTransactionPage />} />
+                  <Route path="transaction/:id" element={<EditTransactionPage />} />
+                  <Route path="budget-edit" element={<BudgetEditPage />} />
+                  <Route path="accounts" element={<AccountsPage />} />
+                  <Route path="categories" element={<CategoriesPage />} />
+                  <Route path="books" element={<BooksPage />} />
+                  <Route path="book-settings" element={<BookSettingsPage />} />
                 </Route>
-                <Route path="transaction/new" element={<NewTransactionPage />} />
-                <Route path="transaction/:id" element={<EditTransactionPage />} />
-                <Route path="budget-edit" element={<BudgetEditPage />} />
-                <Route path="accounts" element={<AccountsPage />} />
-                <Route path="categories" element={<CategoriesPage />} />
-                <Route path="books" element={<BooksPage />} />
-                <Route path="book-settings" element={<BookSettingsPage />} />
-              </Route>
-              <Route element={<Guest />}>
-                <Route path="login" element={<LoginPage />} />
-                <Route path="signup" element={<SignupPage />} />
-              </Route>
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </BrowserRouter>
-        )}
+                <Route element={<Guest />}>
+                  <Route path="login" element={<LoginPage />} />
+                  <Route path="signup" element={<SignupPage />} />
+                </Route>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </BrowserRouter>
+          )}
+        </InstallGate>
       </div>
       <ConfirmHost />
       <ToastHost />
