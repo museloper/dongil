@@ -50,4 +50,8 @@ pnpm test:e2e    # 실제 DB: 인증/토큰 회전, 거래 CRUD 잔액 정합성
 
 ## 배포
 
-`docker compose --profile prod up -d --build` (API 이미지 + DB). JWT 시크릿은 환경변수로 반드시 교체.
+`docker compose --profile prod up -d --build` (API 이미지 + DB). 시작할 때 마이그레이션이 자동 적용되고, 두 컨테이너 모두 `restart: unless-stopped` 라 Docker 가 켜지면 같이 뜬다.
+
+- JWT 시크릿은 루트 `.env` 에 `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` 으로 둔다(`env_file`). 파일이 없으면 prod 실행을 거부하고, DB 만 띄우는 `pnpm db:up` 은 그대로 된다.
+- 포트는 `127.0.0.1` 에만 열린다. 폰에서는 `tailscale serve --bg --https=8443 http://127.0.0.1:3000` 으로 접속한다.
+- 운영 컨테이너가 3000 을 쓰므로, 개발 서버(`pnpm dev`)를 띄우기 전에 `docker compose stop api` 한다.

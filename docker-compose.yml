@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: dongil
       POSTGRES_DB: dongil
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,16 +21,19 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     profiles: ["prod"]
+    restart: unless-stopped
+    # JWT_ACCESS_SECRET, JWT_REFRESH_SECRET 은 루트 .env 에서 읽는다 (없으면 prod 실행 거부)
+    env_file:
+      - path: .env
+        required: true
     depends_on:
       db:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://dongil:dongil@db:5432/dongil
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-change-me-access}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh}
       PORT: 3000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   pgdata:

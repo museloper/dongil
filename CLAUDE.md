@@ -76,7 +76,8 @@ cd apps/mobile
 ## 환경 함정
 
 - **5432 포트 충돌:** 로컬에 `postgresql-x64-18` 서비스(자동 시작)가 설치되어 있다. 켜져 있으면 API 가 엉뚱한 DB 로 붙어 `P1000` 인증 오류가 난다.
-- `docker` 가 PATH 에 없으면 `C:\Users\jisuzzxng\AppData\Local\Programs\DockerDesktop\resources\bin` 을 추가한다.
+- `docker` 가 PATH 에 없으면 `C:\Program Files\Docker\Docker\resources\bin`(또는 `C:\Users\jisuzzxng\AppData\Local\Programs\DockerDesktop\resources\bin`)을 추가한다.
+- **운영 API 컨테이너(`dongil-api-1`)가 3000 을 쓴다.** `pnpm dev` 전에 `docker compose stop api`, 끝나면 `docker compose --profile prod up -d`.
 - **pnpm 10 은 설치 스크립트를 막는다.** Prisma 처럼 빌드가 필요한 패키지는 루트 `package.json` 의 `pnpm.onlyBuiltDependencies` 에 추가한다.
 - `.npmrc` 의 `node-linker=hoisted` 는 Expo 호환 때문에 필요하다. 지우지 않는다.
 - **웹 미리보기 한정 현상:**
