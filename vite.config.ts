@@ -7,6 +7,9 @@ import pkg from './package.json' with { type: 'json' };
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  // Tailscale Serve(https://<기기>.<tailnet>.ts.net) 로 프록시해 폰에서 HTTPS 로 설치할 수 있게 한다
+  server: { allowedHosts: ['.ts.net'] },
+  preview: { allowedHosts: ['.ts.net'] },
   plugins: [
     react(),
     VitePWA({
