@@ -156,7 +156,7 @@ export function useTransaction(id: string | undefined) {
   });
 }
 
-function useStat<T>(name: string, query: Record<string, string | number>) {
+function useStat<T>(name: string, query: Record<string, string | number | undefined>) {
   const bookId = useBookId();
   return useQuery({
     queryKey: ['stats', bookId, name, query],
@@ -165,9 +165,12 @@ function useStat<T>(name: string, query: Record<string, string | number>) {
   });
 }
 
-export const useSummary = (month: string) => useStat<SummaryDto>('summary', { month });
-export const useByCategory = (month: string) => useStat<CategoryStatDto[]>('by-category', { month });
-export const useTrend = (month: string, months = 6) => useStat<TrendPointDto[]>('trend', { month, months });
+/** accountId 를 주면 그 계좌(통장)만, 없으면 가계부 전체 통계 */
+export const useSummary = (month: string, accountId?: string) => useStat<SummaryDto>('summary', { month, accountId });
+export const useByCategory = (month: string, accountId?: string) =>
+  useStat<CategoryStatDto[]>('by-category', { month, accountId });
+export const useTrend = (month: string, months = 6, accountId?: string) =>
+  useStat<TrendPointDto[]>('trend', { month, months, accountId });
 export const useCalendar = (month: string) => useStat<CalendarDayDto[]>('calendar', { month });
 
 export function useBudget(month: string) {

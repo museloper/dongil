@@ -1,19 +1,25 @@
-import { formatWon } from '@/shared';
+import { formatWon, type SummaryDto } from '@/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { DonutChart, TrendBars } from '@/components/charts';
 import { CountUp } from '@/components/money';
 import { MonthSwitcher } from '@/components/month-switcher';
 import { Screen } from '@/components/screen';
-import { AppText, Card, EmptyState, ErrorState, ProgressBar, SectionTitle } from '@/components/ui';
-import { useByCategory, useSummary, useTrend } from '@/features/queries';
+import { useState } from 'react';
+import { AppText, Card, Chip, EmptyState, ErrorState, ProgressBar, SectionTitle } from '@/components/ui';
+import { useAccounts, useByCategory, useSummary, useTrend } from '@/features/queries';
 import { useMonth } from '@/lib/ui-store';
 import type { ColorToken } from '@/theme/tokens';
 
 export default function StatsPage() {
   const month = useMonth((s) => s.month);
-  const summary = useSummary(month);
-  const byCat = useByCategory(month);
-  const trend = useTrend(month, 6);
+  const accounts = useAccounts().data ?? [];
+  const [picked, setPicked] = useState<string>();
+  // 보관(삭제)된 계좌를 고른 채로 남지 않게, 목록에 없으면 전체로 본다
+  const account = accounts.find((a) => a.id === picked);
+  const accountId = account?.id;
+  const summary = useSummary(month, accountId);
+  const byCat = useByCategory(month, accountId);
+  const trend = useTrend(month, 6, accountId);
 
   const refresh = () => {
     summary.refetch();
@@ -25,6 +31,14 @@ export default function StatsPage() {
 
   return (
     <Screen title="통계" right={<MonthSwitcher />}>
+      {accounts.length > 1 && (
+        <div className="hscroll">
+          <Chip label="전체" active={!accountId} onClick={() => setPicked(undefined)} />
+          {accounts.map((a) => (
+            <Chip key={a.id} label={a.name} active={a.id === accountId} color={a.color} onClick={() => setPicked(a.id)} />
+          ))}
+        </div>
+      )}
       {byCat.error ? (
         <ErrorState error={byCat.error} onRetry={refresh} />
       ) : (
@@ -75,12 +89,28 @@ export default function StatsPage() {
 
           {summary.data && (
             <Card className="fade-in-up" style={{ animationDelay: '160ms', display: 'grid', gap: 12 }}>
-              <AppText variant="heading">이번 달 한눈에</AppText>
+              <AppText variant="heading">{account ? `${account.name} 이번 달` : '이번 달 한눈에'}</AppText>
               <Row label="수입" value={formatWon(summary.data.income)} tone="income" />
               <Row label="지출" value={formatWon(summary.data.expense)} tone="expense" />
               <Row label="지난달 지출" value={formatWon(summary.data.prevExpense)} />
               <hr className="divider" />
               <Row label="순수익" value={formatWon(summary.data.net)} tone={summary.data.net < 0 ? 'expense' : 'text'} bold />
+              {account ? (
+                <>
+                  <hr className="divider" />
+                  <Row label="다른 통장에서 받은 돈" value={formatWon(summary.data.transferIn)} />
+                  <Row label="다른 통장으로 보낸 돈" value={formatWon(summary.data.transferOut)} />
+                  <Row label="통장 잔액 변화" value={signedWon(balanceChange(summary.data))} bold />
+                </>
+              ) : (
+                summary.data.transferOut > 0 && (
+                  <>
+                    <hr className="divider" />
+                    <Row label="통장 간 이체" value={formatWon(summary.data.transferOut)} />
+                    <AppText variant="caption" tone="textMuted">통장끼리 옮긴 돈은 수입·지출에 넣지 않아요</AppText>
+                  </>
+                )
+              )}
             </Card>
           )}
         </>
@@ -88,6 +118,11 @@ export default function StatsPage() {
     </Screen>
   );
 }
+
+/** 수입·지출에 이체까지 더한 그 통장의 이번 달 잔액 변화 */
+const balanceChange = (s: SummaryDto) => s.income - s.expense + s.transferIn - s.transferOut;
+
+const signedWon = (v: number) => (v > 0 ? '+' : v < 0 ? '-' : '') + formatWon(Math.abs(v));
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (

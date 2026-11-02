@@ -115,6 +115,9 @@ export const TrendQuerySchema = z.object({
   month,
   months: z.coerce.number().int().min(1).max(24).default(6),
 });
+/** 통계 조회. accountId 를 주면 그 계좌(통장)만, 없으면 가계부 전체 */
+export const StatsQuerySchema = MonthQuerySchema.extend({ accountId: z.string().optional() });
+export const StatsTrendQuerySchema = TrendQuerySchema.extend({ accountId: z.string().optional() });
 export const ExportQuerySchema = z.object({
   from: z.string().datetime({ offset: true }),
   to: z.string().datetime({ offset: true }),
