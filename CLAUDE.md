@@ -46,6 +46,21 @@ API 는 dongil 저장소에서 `pnpm db:up` 후 `apps/api` 에서 `pnpm dev` 로
 - 토큰은 `localStorage`(`src/lib/storage.ts`)에 둔다. refresh 토큰이 회전되므로 여러 탭에서 쓸 때를 위해 `refreshTokens` 가 저장소의 최신 토큰을 먼저 다시 읽는다.
 - API 주소: `VITE_API_URL` → 없으면 `현재 호스트:3000/api/v1`. HTTPS 로 배포하면 API 도 HTTPS 여야 한다(mixed content).
 
+## 모바일 앱 동기화 — dongil
+
+모바일 앱은 [museloper/dongil](https://github.com/museloper/dongil) (로컬 `../dongil`)의 `apps/mobile` 에 있다. 사용자는 두 앱을 같은 서비스로 쓰므로 화면이 어긋나면 안 된다.
+
+- **UI/UX 변경은 이 저장소와 dongil 모바일(`apps/mobile`) 양쪽에 함께 반영한다.** 한쪽만 고치고 끝내지 않는다.
+  - 대상: 화면 구성·흐름, 문구, 새 화면·기능, 색 토큰(`tokens.ts` 는 양쪽 값이 같아야 함), 아이콘·카테고리 아이콘 선택지, 빈/에러 상태.
+  - 같은 작업 단위로 양쪽에 커밋한다. 이번에 반대쪽을 못 하면 그 저장소에 이슈를 남기고 서로 링크한다.
+- 공용 스키마·DTO 가 필요하면 dongil 의 `packages/shared` 를 먼저 고치고 `npm run sync-shared` 로 가져온다.
+- 플랫폼 특성 때문에 일부러 다르게 한 부분은 아래 "모바일 앱과 다른 점"에 적는다. 여기 없는 차이는 동기화 누락으로 본다.
+- 파일 대응(웹 ↔ 모바일):
+  - `src/pages/<탭>.tsx` ↔ `src/app/(tabs)/<탭>.tsx` (`home.tsx` ↔ 홈 `index.tsx`)
+  - `src/pages/<이름>.tsx` ↔ `src/app/<이름>.tsx`, `auth.tsx` ↔ `(auth)/*`, `transaction.tsx` ↔ `transaction/*`
+  - `src/components/*` ↔ 같은 이름 (`auth-shell` ↔ `auth-form`), `src/features/queries.ts`·`src/lib/*` ↔ 같은 경로
+  - 웹 전용(대응 없음): `dialog`, `icon`, `install-gate`, `update-prompt`
+
 ## 모바일 앱과 다른 점
 
 - 스와이프 삭제 없음 → 거래 수정 화면의 휴지통으로 삭제.
