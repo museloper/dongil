@@ -5,7 +5,7 @@ import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-re
 import { formatWon, type AccountDto, type AccountType } from '@dongil/shared';
 import { MoneyInput } from '@/components/money-input';
 import { AppText, Button, Card, ErrorState, Input, Loading, PressableScale, Segmented, haptic, type IconName } from '@/components/ui';
-import { useAccounts, useDeleteAccount, useSaveAccount, type AccountInput } from '@/features/queries';
+import { useAccounts, useCurrentBook, useDeleteAccount, useSaveAccount, useSetDefaultAccount, type AccountInput } from '@/features/queries';
 import { useTheme } from '@/theme/theme';
 import { SWATCHES } from '@/theme/tokens';
 import { ColorPicker } from '@/components/color-picker';
@@ -18,6 +18,7 @@ const TYPE_META: Record<AccountType, { label: string; icon: IconName }> = {
 
 export default function AccountsScreen() {
   const accounts = useAccounts();
+  const defaultId = useCurrentBook().book?.defaultAccountId ?? null;
   const [editing, setEditing] = useState<AccountDto | 'new' | null>(null);
   const total = accounts.data?.reduce((a, b) => a + b.balance, 0) ?? 0;
 
@@ -35,6 +36,7 @@ export default function AccountsScreen() {
         <AccountEditor
           key={editing === 'new' ? 'new' : editing.id}
           account={editing === 'new' ? undefined : editing}
+          isDefault={editing !== 'new' && editing.id === defaultId}
           onDone={() => setEditing(null)}
         />
       ) : (
@@ -44,15 +46,21 @@ export default function AccountsScreen() {
       <Card padded={false} style={{ paddingVertical: 6 }}>
         {accounts.data.map((a) => (
           <Animated.View key={a.id} layout={LinearTransition} exiting={FadeOut}>
-            <AccountRow account={a} onPress={() => setEditing(a)} />
+            <AccountRow account={a} isDefault={a.id === defaultId} onPress={() => setEditing(a)} />
           </Animated.View>
         ))}
       </Card>
+
+      {!defaultId && accounts.data.length > 0 && (
+        <AppText variant="caption" tone="textSub" style={{ textAlign: 'center' }}>
+          계좌를 눌러 주 자산으로 지정하면 입력할 때 먼저 선택돼요
+        </AppText>
+      )}
     </ScrollView>
   );
 }
 
-function AccountRow({ account, onPress }: { account: AccountDto; onPress: () => void }) {
+function AccountRow({ account, isDefault, onPress }: { account: AccountDto; isDefault: boolean; onPress: () => void }) {
   const { colors } = useTheme();
   return (
     <PressableScale onPress={onPress} style={styles.row} scaleTo={0.98}>
@@ -61,7 +69,10 @@ function AccountRow({ account, onPress }: { account: AccountDto; onPress: () => 
       </View>
       <View style={{ flex: 1 }}>
         <AppText>{account.name}</AppText>
-        <AppText variant="caption" tone="textSub">{TYPE_META[account.type].label}</AppText>
+        <AppText variant="caption" tone="textSub">
+          {TYPE_META[account.type].label}
+          {isDefault ? ' · 주 자산' : ''}
+        </AppText>
       </View>
       <AppText variant="heading" tone={account.balance < 0 ? 'expense' : 'text'}>{formatWon(account.balance)}</AppText>
       <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -69,8 +80,9 @@ function AccountRow({ account, onPress }: { account: AccountDto; onPress: () => 
   );
 }
 
-function AccountEditor({ account, onDone }: { account?: AccountDto; onDone: () => void }) {
+function AccountEditor({ account, isDefault, onDone }: { account?: AccountDto; isDefault: boolean; onDone: () => void }) {
   const save = useSaveAccount();
+  const setDefault = useSetDefaultAccount();
   const remove = useDeleteAccount();
   const [form, setForm] = useState<AccountInput>({
     name: account?.name ?? '',
@@ -120,6 +132,15 @@ function AccountEditor({ account, onDone }: { account?: AccountDto; onDone: () =
           <Button title="취소" kind="ghost" onPress={onDone} style={{ flex: 1 }} />
           <Button title="저장" onPress={submit} loading={save.isPending} style={{ flex: 2 }} />
         </View>
+        {account && (
+          <Button
+            title={isDefault ? '주 자산 해제' : '주 자산으로 지정'}
+            icon={isDefault ? 'star' : 'star-outline'}
+            kind="secondary"
+            onPress={() => setDefault.mutate(isDefault ? null : account.id, { onSuccess: () => haptic('success'), onError: (e) => setError(e.message) })}
+            loading={setDefault.isPending}
+          />
+        )}
         {account && <Button title="계좌 숨기기" kind="danger" onPress={onDelete} loading={remove.isPending} />}
       </Card>
     </Animated.View>

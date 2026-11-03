@@ -242,7 +242,22 @@ export function useDeleteAccount() {
   const bookId = useBookId();
   return useMutation({
     mutationFn: (id: string) => api<void>(bookPath(bookId!, `/accounts/${id}`), { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['accounts'] });
+      // 숨긴 계좌가 주 자산이었으면 서버에서 지정이 풀린다
+      qc.invalidateQueries({ queryKey: ['books'] });
+    },
+  });
+}
+
+/** 내가 주로 쓰는 자산 지정/해제 (현재 가계부) */
+export function useSetDefaultAccount() {
+  const qc = useQueryClient();
+  const bookId = useBookId();
+  return useMutation({
+    mutationFn: (accountId: string | null) =>
+      api<void>(bookPath(bookId!, '/accounts/default'), { method: 'PUT', body: { accountId } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['books'] }),
   });
 }
 

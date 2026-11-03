@@ -19,11 +19,13 @@ const bookInclude = {
 type BookWithMembers = Prisma.BookGetPayload<{ include: typeof bookInclude }>;
 
 function toBookDto(book: BookWithMembers, userId: string): BookDto {
+  const me = book.members.find((m) => m.userId === userId);
   return {
     id: book.id,
     name: book.name,
     type: book.type,
-    role: book.members.find((m) => m.userId === userId)?.role ?? 'MEMBER',
+    role: me?.role ?? 'MEMBER',
+    defaultAccountId: me?.defaultAccountId ?? null,
     members: book.members.map((m) => ({ userId: m.userId, nickname: m.user.nickname, role: m.role })),
   };
 }

@@ -17,6 +17,8 @@ const ICONS = {
   'business-outline': io.businessOutline,
   'calendar-outline': io.calendarOutline,
   'card-outline': io.cardOutline,
+  star: io.star,
+  'star-outline': io.starOutline,
   'document-text-outline': io.documentTextOutline,
   'time-outline': io.timeOutline,
   'cash-outline': io.cashOutline,

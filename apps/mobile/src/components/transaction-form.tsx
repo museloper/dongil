@@ -6,7 +6,7 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInpu
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatWon, toLocalDateKey, TransactionCreateSchema, type TransactionDto, type TxType } from '@dongil/shared';
-import { useAccounts, useCategories, useDeleteTransaction, useSaveTransaction } from '@/features/queries';
+import { useAccounts, useCategories, useCurrentBook, useDeleteTransaction, useSaveTransaction } from '@/features/queries';
 import { closeModal } from '@/lib/nav';
 import { formatDayLabel, formatTimeLabel, shiftDay, toTimeKey, withDateKey, withTimeKey } from '@/lib/date';
 import { useTheme } from '@/theme/theme';
@@ -18,6 +18,7 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const accounts = useAccounts();
+  const { book } = useCurrentBook();
   const categories = useCategories();
   const save = useSaveTransaction();
   const remove = useDeleteTransaction();
@@ -34,7 +35,10 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const accountList = accounts.data ?? [];
+  // 주 자산을 맨 앞에 두어 먼저 선택되게 한다. 수정 화면은 accountId 가 있어 기존 계좌가 그대로 유지된다
+  const accountList = [...(accounts.data ?? [])].sort(
+    (a, b) => Number(b.id === book?.defaultAccountId) - Number(a.id === book?.defaultAccountId),
+  );
   const cats = (categories.data ?? []).filter((c) => c.type === type);
   const fromId = accountId ?? accountList[0]?.id ?? null;
   const dateKey = toLocalDateKey(new Date(occurredAt));

@@ -7,7 +7,7 @@ import { Icon, type IconName } from '@/components/icon';
 import { MoneyInput } from '@/components/money-input';
 import { SubScreen } from '@/components/screen';
 import { AppText, Button, Card, ErrorState, Input, Loading, Pressable, Segmented, haptic } from '@/components/ui';
-import { useAccounts, useDeleteAccount, useSaveAccount, type AccountInput } from '@/features/queries';
+import { useAccounts, useCurrentBook, useDeleteAccount, useSaveAccount, useSetDefaultAccount, type AccountInput } from '@/features/queries';
 import { SWATCHES } from '@/theme/tokens';
 
 const TYPE_META: Record<AccountType, { label: string; icon: IconName }> = {
@@ -18,6 +18,7 @@ const TYPE_META: Record<AccountType, { label: string; icon: IconName }> = {
 
 export default function AccountsPage() {
   const accounts = useAccounts();
+  const defaultId = useCurrentBook().book?.defaultAccountId ?? null;
   const [editing, setEditing] = useState<AccountDto | 'new' | null>(null);
   const total = accounts.data?.reduce((a, b) => a + b.balance, 0) ?? 0;
 
@@ -38,6 +39,7 @@ export default function AccountsPage() {
             <AccountEditor
               key={editing === 'new' ? 'new' : editing.id}
               account={editing === 'new' ? undefined : editing}
+              isDefault={editing !== 'new' && editing.id === defaultId}
               onDone={() => setEditing(null)}
             />
           ) : (
@@ -53,7 +55,10 @@ export default function AccountsPage() {
                   </span>
                   <span style={{ flex: 1, display: 'grid', textAlign: 'left', minWidth: 0 }}>
                     <AppText lines={1}>{a.name}</AppText>
-                    <AppText variant="caption" tone="textSub">{TYPE_META[a.type].label}</AppText>
+                    <AppText variant="caption" tone="textSub">
+                      {TYPE_META[a.type].label}
+                      {a.id === defaultId ? ' · 주 자산' : ''}
+                    </AppText>
                   </span>
                   <AppText variant="heading" tone={a.balance < 0 ? 'expense' : 'text'} className="tabular nowrap">{formatWon(a.balance)}</AppText>
                   <Icon name="chevron-forward" size={16} color="var(--textMuted)" />
@@ -61,14 +66,21 @@ export default function AccountsPage() {
               ))}
             </Card>
           )}
+
+          {!defaultId && accounts.data.length > 0 && (
+            <AppText variant="caption" tone="textSub" style={{ textAlign: 'center' }}>
+              계좌를 눌러 주 자산으로 지정하면 입력할 때 먼저 선택돼요
+            </AppText>
+          )}
         </>
       )}
     </SubScreen>
   );
 }
 
-function AccountEditor({ account, onDone }: { account?: AccountDto; onDone: () => void }) {
+function AccountEditor({ account, isDefault, onDone }: { account?: AccountDto; isDefault: boolean; onDone: () => void }) {
   const save = useSaveAccount();
+  const setDefault = useSetDefaultAccount();
   const remove = useDeleteAccount();
   const [form, setForm] = useState<AccountInput>({
     name: account?.name ?? '',
@@ -119,6 +131,15 @@ function AccountEditor({ account, onDone }: { account?: AccountDto; onDone: () =
         <Button title="취소" kind="ghost" onClick={onDone} style={{ flex: 1 }} />
         <Button title="저장" onClick={submit} loading={save.isPending} style={{ flex: 2 }} />
       </div>
+      {account && (
+        <Button
+          title={isDefault ? '주 자산 해제' : '주 자산으로 지정'}
+          icon={isDefault ? 'star' : 'star-outline'}
+          kind="secondary"
+          onClick={() => setDefault.mutate(isDefault ? null : account.id, { onSuccess: () => haptic('success'), onError: (e) => setError(e.message) })}
+          loading={setDefault.isPending}
+        />
+      )}
       {account && <Button title="계좌 숨기기" kind="danger" onClick={onDelete} loading={remove.isPending} />}
     </Card>
   );

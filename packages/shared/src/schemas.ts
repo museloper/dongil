@@ -59,6 +59,10 @@ export const AccountUpdateSchema = z.object({
   color: hexColor.optional(),
 });
 
+/** 내가 주로 쓰는 자산 지정. null 이면 해제 */
+export const DefaultAccountSchema = z.object({ accountId: z.string().min(1).nullable() });
+export type DefaultAccountInput = z.infer<typeof DefaultAccountSchema>;
+
 export const CategoryCreateSchema = z.object({
   name: z.string().min(1).max(20),
   type: CategoryTypeEnum,

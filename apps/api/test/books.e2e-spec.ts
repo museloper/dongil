@@ -146,6 +146,38 @@ describe('공유 가계부 (e2e)', () => {
     expect((await as('a', api().delete(bookPath(shared.id, `/members/${users.a.user.id}`)))).status).toBe(400);
   });
 
+  describe('주로 쓰는 자산', () => {
+    const defaultOf = async (who: 'a' | 'b') =>
+      ((await as(who, api().get('/api/v1/books'))).body as BookDto[]).find((b) => b.id === shared.id)?.defaultAccountId;
+
+    it('멤버마다 따로 지정하고 해제할 수 있다', async () => {
+      const acc: AccountDto = (await as('a', api().post(bookPath(shared.id, '/accounts'))).send({ name: '주 카드', type: 'CARD' })).body;
+      expect(await defaultOf('a')).toBeNull();
+
+      expect((await as('a', api().put(bookPath(shared.id, '/accounts/default'))).send({ accountId: acc.id })).status).toBe(204);
+      expect(await defaultOf('a')).toBe(acc.id);
+      expect(await defaultOf('b')).toBeNull();
+
+      expect((await as('a', api().put(bookPath(shared.id, '/accounts/default'))).send({ accountId: null })).status).toBe(204);
+      expect(await defaultOf('a')).toBeNull();
+    });
+
+    it('다른 가계부의 계좌는 400, 비멤버는 404', async () => {
+      const personalC: BookDto = (await as('c', api().get('/api/v1/books'))).body[0];
+      const other: AccountDto[] = (await as('c', api().get(bookPath(personalC.id, '/accounts')))).body;
+      expect((await as('a', api().put(bookPath(shared.id, '/accounts/default'))).send({ accountId: other[0].id })).status).toBe(400);
+      expect((await as('c', api().put(bookPath(shared.id, '/accounts/default'))).send({ accountId: null })).status).toBe(404);
+    });
+
+    it('계좌를 숨기면 지정이 풀리고, 숨긴 계좌는 지정할 수 없다', async () => {
+      const acc: AccountDto = (await as('a', api().post(bookPath(shared.id, '/accounts'))).send({ name: '곧 숨길 통장', type: 'BANK' })).body;
+      await as('a', api().put(bookPath(shared.id, '/accounts/default'))).send({ accountId: acc.id });
+      expect((await as('a', api().delete(bookPath(shared.id, `/accounts/${acc.id}`)))).status).toBe(204);
+      expect(await defaultOf('a')).toBeNull();
+      expect((await as('a', api().put(bookPath(shared.id, '/accounts/default'))).send({ accountId: acc.id })).status).toBe(400);
+    });
+  });
+
   describe('가계부 메모', () => {
     let noteA: NoteDto;
     let noteB: NoteDto;

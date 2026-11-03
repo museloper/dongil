@@ -57,6 +57,8 @@ export interface BookDto {
   type: BookType;
   /** 내 역할 */
   role: MemberRole;
+  /** 내가 주로 쓰는 자산. 거래 입력 때 먼저 선택된다 */
+  defaultAccountId: string | null;
   members: BookMemberDto[];
 }
 export interface InviteDto {
