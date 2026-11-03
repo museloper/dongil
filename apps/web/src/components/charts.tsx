@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { compactWon, type TrendPointDto } from '@/shared';
+import { compactWon, type TrendPointDto } from '@dongil/shared';
 import { AppText } from './ui';
 
 /** 카테고리 비중 도넛 차트. children 은 가운데에 표시 */

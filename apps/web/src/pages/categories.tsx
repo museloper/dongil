@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CategoryDto, CategoryType } from '@/shared';
+import type { CategoryDto, CategoryType } from '@dongil/shared';
 import { CategoryIcon, ICON_CHOICES, tint } from '@/components/category-icon';
 import { ColorPicker } from '@/components/color-picker';
 import { confirm } from '@/components/dialog';

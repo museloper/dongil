@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { compactWon, formatWon, toLocalDateKey, type TransactionDto, type TxType } from '@/shared';
+import { compactWon, formatWon, toLocalDateKey, type TransactionDto, type TxType } from '@dongil/shared';
 import { Icon } from '@/components/icon';
 import { MonthSwitcher } from '@/components/month-switcher';
 import { Fab, Screen } from '@/components/screen';

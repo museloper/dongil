@@ -1,4 +1,4 @@
-import { KST_OFFSET_MIN, toLocalDateKey } from '@/shared';
+import { KST_OFFSET_MIN, toLocalDateKey } from '@dongil/shared';
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 

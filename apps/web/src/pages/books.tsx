@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { BOOK_MAX_MEMBERS, BookCreateSchema, JoinBookSchema, type BookDto } from '@/shared';
+import { BOOK_MAX_MEMBERS, BookCreateSchema, JoinBookSchema, type BookDto } from '@dongil/shared';
 import { MemberAvatars } from '@/components/book-switcher';
 import { toast } from '@/components/dialog';
 import { Icon } from '@/components/icon';

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { currentMonth, formatWon, toLocalDateKey } from '@/shared';
+import { currentMonth, formatWon, toLocalDateKey } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { CountUp } from '@/components/money';
 import { MonthSwitcher } from '@/components/month-switcher';

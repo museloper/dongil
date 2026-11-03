@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { BOOK_MAX_MEMBERS, BookUpdateSchema, KST_OFFSET_MIN, type BookDto, type InviteDto } from '@/shared';
+import { BOOK_MAX_MEMBERS, BookUpdateSchema, KST_OFFSET_MIN, type BookDto, type InviteDto } from '@dongil/shared';
 import { confirm, toast } from '@/components/dialog';
 import { Icon } from '@/components/icon';
 import { SubScreen } from '@/components/screen';

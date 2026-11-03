@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { formatWon, toLocalDateKey, TransactionCreateSchema, type TransactionDto, type TxType } from '@/shared';
+import { formatWon, toLocalDateKey, TransactionCreateSchema, type TransactionDto, type TxType } from '@dongil/shared';
 import { useAccounts, useCategories, useDeleteTransaction, useSaveTransaction } from '@/features/queries';
 import { formatDayLabel, shiftDay, withDateKey } from '@/lib/date';
 import { useCloseModal } from '@/lib/nav';

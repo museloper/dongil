@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { currentMonth, formatWon, shiftMonth, type BudgetDto, type CategoryDto } from '@/shared';
+import { currentMonth, formatWon, shiftMonth, type BudgetDto, type CategoryDto } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { toast } from '@/components/dialog';
 import { MoneyInput } from '@/components/money-input';

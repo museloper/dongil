@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AuthResponse, UserDto } from '@/shared';
+import type { AuthResponse, UserDto } from '@dongil/shared';
 import { api, ApiError, setOnAuthExpired, tokenStore } from './api';
 import { useBookStore } from './book-store';
 import { queryClient } from './query-client';

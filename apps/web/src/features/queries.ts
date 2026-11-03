@@ -17,7 +17,7 @@ import {
   type TransactionDto,
   type TrendPointDto,
   type TxType,
-} from '@/shared';
+} from '@dongil/shared';
 import { api } from '@/lib/api';
 import { useBookStore } from '@/lib/book-store';
 

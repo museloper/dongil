@@ -1,4 +1,4 @@
-import { formatWon } from '@/shared';
+import { formatWon } from '@dongil/shared';
 import { AppText } from './ui';
 
 /** 숫자만 받는 금액 입력칸 (천 단위 콤마 자동) */

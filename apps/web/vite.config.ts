@@ -6,7 +6,13 @@ import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
-  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // shared 의 dist 는 CommonJS 라 Vite 가 그대로 못 쓴다. 모바일처럼 원본 소스를 읽는다
+      '@dongil/shared': fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url)),
+    },
+  },
   // Tailscale Serve(https://<기기>.<tailnet>.ts.net) 로 프록시해 폰에서 HTTPS 로 설치할 수 있게 한다
   server: { allowedHosts: ['.ts.net'] },
   preview: { allowedHosts: ['.ts.net'] },

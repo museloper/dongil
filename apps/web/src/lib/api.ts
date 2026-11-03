@@ -1,4 +1,4 @@
-import type { AuthResponse, AuthTokens } from '@/shared';
+import type { AuthResponse, AuthTokens } from '@dongil/shared';
 import { storage } from './storage';
 
 /**

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { formatWon } from '@/shared';
+import { formatWon } from '@dongil/shared';
 import type { ColorToken } from '@/theme/tokens';
 import { AppText, type TextVariant } from './ui';
 

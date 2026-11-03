@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatWon, type AccountDto, type AccountType } from '@/shared';
+import { formatWon, type AccountDto, type AccountType } from '@dongil/shared';
 import { tint } from '@/components/category-icon';
 import { ColorPicker } from '@/components/color-picker';
 import { confirm } from '@/components/dialog';

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { formatWon } from '@/shared';
+import { formatWon } from '@dongil/shared';
 import { BookSwitcher } from '@/components/book-switcher';
 import { tint } from '@/components/category-icon';
 import { Icon } from '@/components/icon';

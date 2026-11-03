@@ -1,4 +1,4 @@
-import { currentMonth } from '@/shared';
+import { currentMonth } from '@dongil/shared';
 import { formatMonthLabel } from '@/lib/date';
 import { useMonth } from '@/lib/ui-store';
 import { AppText, IconButton, Pressable } from './ui';

@@ -1,4 +1,4 @@
-import { formatWon, type SummaryDto } from '@/shared';
+import { formatWon, type SummaryDto } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { DonutChart, TrendBars } from '@/components/charts';
 import { CountUp } from '@/components/money';

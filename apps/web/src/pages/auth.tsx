@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { LoginSchema, SignupSchema } from '@/shared';
+import { LoginSchema, SignupSchema } from '@dongil/shared';
 import { AuthShell } from '@/components/auth-shell';
 import { AppText, Button, Input } from '@/components/ui';
 import { useAuth } from '@/lib/auth';

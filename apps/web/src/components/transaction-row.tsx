@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { formatSigned, type TransactionDto } from '@/shared';
+import { formatSigned, type TransactionDto } from '@dongil/shared';
 import { useCurrentBook } from '@/features/queries';
 import { CategoryIcon } from './category-icon';
 import { AppText, Pressable } from './ui';

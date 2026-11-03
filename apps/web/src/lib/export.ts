@@ -1,4 +1,4 @@
-import { monthRange } from '@/shared';
+import { monthRange } from '@dongil/shared';
 import { api } from './api';
 
 /** 가계부의 해당 월 거래를 CSV 파일로 내려받는다 */
