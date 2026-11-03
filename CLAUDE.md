@@ -73,6 +73,20 @@ cd apps/mobile
 - 토큰 저장은 `src/lib/storage.ts` 를 쓴다. 네이티브는 SecureStore, `.web.ts` 는 localStorage 다.
 - 날짜 선택은 `@react-native-community/datetimepicker` v9 를 쓴다. `onChange` 는 deprecated 이므로 `onValueChange`/`onDismiss` 를 쓴다.
 
+## 웹(PWA) 동기화 — dongil-web
+
+같은 서비스의 웹 버전이 별도 저장소 [museloper/dongil-web](https://github.com/museloper/dongil-web) (로컬 `../dongil-web`)에 있다. 사용자는 두 앱을 같은 서비스로 쓰므로 화면이 어긋나면 안 된다.
+
+- **UI/UX 변경은 모바일(`apps/mobile`)과 dongil-web 양쪽에 함께 반영한다.** 한쪽만 고치고 끝내지 않는다.
+  - 대상: 화면 구성·흐름, 문구, 새 화면·기능, 색 토큰(`tokens.ts` 는 양쪽 값이 같아야 함), 아이콘·카테고리 아이콘 선택지, 빈/에러 상태.
+  - 같은 작업 단위로 양쪽에 커밋한다. 이번에 반대쪽을 못 하면 그 저장소에 이슈를 남기고 서로 링크한다.
+- **`packages/shared` 를 바꾸면** dongil-web 에서 `npm run sync-shared` 로 가져온다(웹은 복사본을 쓴다).
+- 플랫폼 특성 때문에 일부러 다르게 한 부분은 dongil-web CLAUDE.md 의 "모바일 앱과 다른 점"에 적는다. 거기 없는 차이는 동기화 누락으로 본다.
+- 파일 대응(모바일 ↔ 웹):
+  - `src/app/(tabs)/<탭>.tsx` ↔ `src/pages/<탭>.tsx` (홈 `index.tsx` ↔ `home.tsx`)
+  - `src/app/<이름>.tsx` ↔ `src/pages/<이름>.tsx`, `(auth)/*` ↔ `auth.tsx`, `transaction/*` ↔ `transaction.tsx`
+  - `src/components/*` ↔ 같은 이름 (`auth-form` ↔ `auth-shell`), `src/features/queries.ts`·`src/lib/*` ↔ 같은 경로
+
 ## 환경 함정
 
 - **5432 포트 충돌:** 로컬에 `postgresql-x64-18` 서비스(자동 시작)가 설치되어 있다. 켜져 있으면 API 가 엉뚱한 DB 로 붙어 `P1000` 인증 오류가 난다.
