@@ -117,3 +117,12 @@ export interface CalendarDayDto {
   income: number;
   expense: number;
 }
+
+/** 가계부 메모. 같은 가계부 멤버끼리 공유한다 */
+export interface NoteDto {
+  id: string;
+  content: string;
+  author: { id: string; nickname: string };
+  createdAt: string;
+  updatedAt: string;
+}

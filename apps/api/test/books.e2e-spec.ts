@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import type { AccountDto, AuthResponse, BookDto, CategoryDto, InviteDto, Paginated, TransactionDto } from '@dongil/shared';
+import type { AccountDto, AuthResponse, BookDto, CategoryDto, InviteDto, NoteDto, Paginated, TransactionDto } from '@dongil/shared';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/app.setup';
 import { PrismaService } from '../src/common/prisma.module';
@@ -146,17 +146,81 @@ describe('공유 가계부 (e2e)', () => {
     expect((await as('a', api().delete(bookPath(shared.id, `/members/${users.a.user.id}`)))).status).toBe(400);
   });
 
+  describe('가계부 메모', () => {
+    let noteA: NoteDto;
+    let noteB: NoteDto;
+
+    it('A·B 가 쓴 메모를 서로 보고, 각 메모에 작성자와 시각이 있다', async () => {
+      const resA = await as('a', api().post(bookPath(shared.id, '/notes'))).send({ content: '  이번 달은 외식 줄이기  ' });
+      expect(resA.status).toBe(201);
+      noteA = resA.body;
+      expect(noteA).toMatchObject({ content: '이번 달은 외식 줄이기', author: { id: users.a.user.id, nickname: 'A' } });
+      expect(noteA.createdAt).toEqual(expect.any(String));
+      noteB = (await as('b', api().post(bookPath(shared.id, '/notes'))).send({ content: '여행 적금 얼마씩?' })).body;
+
+      const listB: NoteDto[] = (await as('b', api().get(bookPath(shared.id, '/notes')))).body;
+      expect(listB.map((n) => [n.content, n.author.nickname])).toEqual([
+        ['여행 적금 얼마씩?', 'B'],
+        ['이번 달은 외식 줄이기', 'A'],
+      ]);
+    });
+
+    it('빈 내용은 400', async () => {
+      expect((await as('a', api().post(bookPath(shared.id, '/notes'))).send({ content: '   ' })).status).toBe(400);
+    });
+
+    it('비멤버는 404, 다른 가계부의 메모 id 로도 404', async () => {
+      expect((await as('c', api().get(bookPath(shared.id, '/notes')))).status).toBe(404);
+      expect((await as('c', api().post(bookPath(shared.id, '/notes'))).send({ content: 'x' })).status).toBe(404);
+
+      const personalA: BookDto = (await as('a', api().get('/api/v1/books'))).body.find((b: BookDto) => b.type === 'PERSONAL');
+      const mine: NoteDto = (await as('a', api().post(bookPath(personalA.id, '/notes'))).send({ content: '혼자 보는 메모' })).body;
+      // 개인 가계부 메모는 공유 가계부 목록에 섞이지 않는다
+      const listA: NoteDto[] = (await as('a', api().get(bookPath(shared.id, '/notes')))).body;
+      expect(listA.map((n) => n.id)).not.toContain(mine.id);
+      // 공유 가계부 경로로 개인 가계부 메모를 고치거나 지울 수 없다
+      expect((await as('a', api().patch(bookPath(shared.id, `/notes/${mine.id}`))).send({ content: 'x' })).status).toBe(404);
+      expect((await as('a', api().delete(bookPath(shared.id, `/notes/${mine.id}`)))).status).toBe(404);
+      // 반대로 공유 가계부 메모를 개인 가계부 경로로도 지울 수 없다
+      expect((await as('a', api().delete(bookPath(personalA.id, `/notes/${noteB.id}`)))).status).toBe(404);
+    });
+
+    it('수정은 작성자만 하고 작성자는 바뀌지 않는다', async () => {
+      expect((await as('b', api().patch(bookPath(shared.id, `/notes/${noteA.id}`))).send({ content: '내가 고침' })).status).toBe(403);
+      const res = await as('a', api().patch(bookPath(shared.id, `/notes/${noteA.id}`))).send({ content: '외식 주 1회' });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ content: '외식 주 1회', author: { nickname: 'A' }, createdAt: noteA.createdAt });
+      expect(new Date(res.body.updatedAt).getTime()).toBeGreaterThan(new Date(noteA.createdAt).getTime());
+      // 수정한 메모가 맨 위로 올라온다
+      const list: NoteDto[] = (await as('b', api().get(bookPath(shared.id, '/notes')))).body;
+      expect(list[0].id).toBe(noteA.id);
+    });
+
+    it('MEMBER 는 남의 메모를 지울 수 없다', async () => {
+      expect((await as('b', api().delete(bookPath(shared.id, `/notes/${noteA.id}`)))).status).toBe(403);
+    });
+
+    it('B 가 나가도 B 의 메모는 남고, OWNER 가 지울 수 있다', async () => {
+      expect((await as('b', api().delete(bookPath(shared.id, `/members/${users.b.user.id}`)))).status).toBe(204);
+      expect((await as('b', api().get(bookPath(shared.id, '/notes')))).status).toBe(404);
+      const list: NoteDto[] = (await as('a', api().get(bookPath(shared.id, '/notes')))).body;
+      expect(list.find((n) => n.id === noteB.id)?.author.nickname).toBe('B');
+      expect((await as('a', api().delete(bookPath(shared.id, `/notes/${noteB.id}`)))).status).toBe(204);
+      expect((await as('a', api().get(bookPath(shared.id, '/notes')))).body).toHaveLength(1);
+    });
+  });
+
   it('B 가 나가면 더 이상 접근할 수 없다', async () => {
-    expect((await as('b', api().delete(bookPath(shared.id, `/members/${users.b.user.id}`)))).status).toBe(204);
-    expect((await as('b', api().get(bookPath(shared.id, '/transactions')))).status).toBe(404);
     const books: BookDto[] = (await as('b', api().get('/api/v1/books'))).body;
     expect(books.map((b) => b.type)).toEqual(['PERSONAL']);
+    expect((await as('b', api().get(bookPath(shared.id, '/transactions')))).status).toBe(404);
   });
 
   it('OWNER 가 삭제하면 가계부 데이터가 모두 지워진다', async () => {
     expect((await as('a', api().delete(bookPath(shared.id)))).status).toBe(204);
     expect(await prisma.transaction.count({ where: { bookId: shared.id } })).toBe(0);
     expect(await prisma.account.count({ where: { bookId: shared.id } })).toBe(0);
+    expect(await prisma.bookNote.count({ where: { bookId: shared.id } })).toBe(0);
     expect((await as('a', api().get(bookPath(shared.id, '/accounts')))).status).toBe(404);
   });
 

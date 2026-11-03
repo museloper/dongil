@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { formatWon, toLocalDateKey, TransactionCreateSchema, type TransactionDto, type TxType } from '@dongil/shared';
 import { useAccounts, useCategories, useDeleteTransaction, useSaveTransaction } from '@/features/queries';
-import { formatDayLabel, shiftDay, withDateKey } from '@/lib/date';
+import { formatDayLabel, formatTimeLabel, shiftDay, toTimeKey, withDateKey, withTimeKey } from '@/lib/date';
 import { useCloseModal } from '@/lib/nav';
 import { CategoryIcon, tint } from './category-icon';
 import { confirm, toast } from './dialog';
@@ -32,6 +32,7 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const cats = (categories.data ?? []).filter((c) => c.type === type);
   const fromId = accountId ?? accountList[0]?.id ?? null;
   const dateKey = toLocalDateKey(new Date(occurredAt));
+  const timeKey = toTimeKey(occurredAt);
 
   const changeType = (t: TxType) => {
     setType(t);
@@ -165,6 +166,21 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
                 </label>
                 <IconButton name="chevron-forward" label="다음날" onClick={() => setOccurredAt(withDateKey(occurredAt, shiftDay(dateKey, 1)))} tone="textSub" />
               </div>
+            </Field>
+
+            <Field label="시간">
+              <label className="date-row time-row">
+                <Icon name="time-outline" size={16} color="var(--textSub)" />
+                <AppText>{formatTimeLabel(timeKey)}</AppText>
+                {/* 날짜와 같이 투명한 시간 입력을 덮어 브라우저 기본 시간 선택을 연다. 값은 KST 시:분 */}
+                <input
+                  type="time"
+                  className="date-overlay"
+                  value={timeKey}
+                  aria-label="시간 선택"
+                  onChange={(e) => e.target.value && setOccurredAt(withTimeKey(occurredAt, e.target.value))}
+                />
+              </label>
             </Field>
 
             <Field label="메모">

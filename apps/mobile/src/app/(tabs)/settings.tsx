@@ -79,6 +79,7 @@ export default function SettingsScreen() {
             </AppText>
           }
         />
+        <MenuRow icon="document-text-outline" label="가계부 메모" onPress={() => router.push('/notes')} />
         <MenuRow icon="swap-horizontal-outline" label="가계부 전환 · 참여" onPress={() => router.push('/books')} />
       </Card>
 

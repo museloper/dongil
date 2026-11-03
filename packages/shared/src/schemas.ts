@@ -128,3 +128,15 @@ export const BudgetUpsertSchema = z.object({
   items: z.array(z.object({ categoryId: z.string().nullable(), amount })).max(50),
 });
 export type BudgetUpsert = z.infer<typeof BudgetUpsertSchema>;
+
+// ---------- 가계부 메모 ----------
+
+export const NOTE_MAX_LENGTH = 2000;
+const noteContent = z
+  .string()
+  .trim()
+  .min(1, '내용을 입력하세요')
+  .max(NOTE_MAX_LENGTH, `${NOTE_MAX_LENGTH}자 이내로 입력하세요`);
+export const NoteCreateSchema = z.object({ content: noteContent });
+export const NoteUpdateSchema = z.object({ content: noteContent });
+export type NoteInput = z.infer<typeof NoteCreateSchema>;

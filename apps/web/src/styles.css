@@ -873,3 +873,25 @@ button.plain {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- 메모 ---------- */
+
+.input.textarea {
+  height: 120px;
+  padding: 14px 16px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.note-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.time-row {
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 16px;
+  position: relative;
+  cursor: pointer;
+}

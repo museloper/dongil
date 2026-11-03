@@ -72,6 +72,7 @@ export default function SettingsPage() {
           onClick={() => navigate('/book-settings')}
           right={<AppText variant="label" tone="textSub" lines={1} style={{ maxWidth: 140 }}>{book?.name}</AppText>}
         />
+        <MenuRow icon="document-text-outline" label="가계부 메모" onClick={() => navigate('/notes')} />
         <MenuRow icon="swap-horizontal-outline" label="가계부 전환 · 참여" onClick={() => navigate('/books')} />
       </Card>
 

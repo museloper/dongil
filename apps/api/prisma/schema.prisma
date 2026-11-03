@@ -50,6 +50,7 @@ model User {
   memberships   BookMember[]
   invites       BookInvite[]
   transactions  Transaction[] @relation("TxAuthor")
+  notes         BookNote[]
   refreshTokens RefreshToken[]
 }
 
@@ -67,6 +68,7 @@ model Book {
   transactions Transaction[]
   budgets      Budget[]
   recurring    RecurringRule[]
+  notes        BookNote[]
 }
 
 model BookMember {
@@ -195,6 +197,22 @@ model RecurringRule {
   transactions Transaction[]
 
   @@index([active, nextRunAt])
+}
+
+/// 가계부 메모. 멤버끼리 공유하고, 가계부가 삭제되면 함께 지워진다.
+model BookNote {
+  id        String   @id @default(cuid())
+  bookId    String
+  /// 작성자. 수정해도 바뀌지 않는다.
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  book   Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([bookId, updatedAt(sort: Desc)])
 }
 
 model RefreshToken {

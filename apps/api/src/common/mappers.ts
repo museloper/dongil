@@ -1,5 +1,5 @@
-import type { Account, Category, Transaction } from '@prisma/client';
-import type { AccountDto, CategoryDto, TransactionDto } from '@dongil/shared';
+import type { Account, BookNote, Category, Transaction } from '@prisma/client';
+import type { AccountDto, CategoryDto, NoteDto, TransactionDto } from '@dongil/shared';
 
 /** BigInt 금액은 JSON 직렬화가 안 되므로 응답 직전에 number 로 바꾼다 (원 단위라 안전 범위 내) */
 export const toAccountDto = (a: Account): AccountDto => ({
@@ -45,4 +45,14 @@ export const toTransactionDto = (t: TxWithRelations): TransactionDto => ({
     ? { id: t.category.id, name: t.category.name, icon: t.category.icon, color: t.category.color }
     : null,
   author: { id: t.createdBy.id, nickname: t.createdBy.nickname },
+});
+
+export const noteInclude = { author: { select: { id: true, nickname: true } } } as const;
+
+export const toNoteDto = (n: BookNote & { author: { id: string; nickname: string } }): NoteDto => ({
+  id: n.id,
+  content: n.content,
+  author: { id: n.author.id, nickname: n.author.nickname },
+  createdAt: n.createdAt.toISOString(),
+  updatedAt: n.updatedAt.toISOString(),
 });

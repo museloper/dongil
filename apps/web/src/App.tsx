@@ -17,6 +17,7 @@ import BudgetPage from '@/pages/budget';
 import BudgetEditPage from '@/pages/budget-edit';
 import CategoriesPage from '@/pages/categories';
 import HomePage from '@/pages/home';
+import NotesPage from '@/pages/notes';
 import SettingsPage from '@/pages/settings';
 import StatsPage from '@/pages/stats';
 import { EditTransactionPage, NewTransactionPage } from '@/pages/transaction';
@@ -81,6 +82,7 @@ export default function App() {
                   <Route path="categories" element={<CategoriesPage />} />
                   <Route path="books" element={<BooksPage />} />
                   <Route path="book-settings" element={<BookSettingsPage />} />
+                  <Route path="notes" element={<NotesPage />} />
                 </Route>
                 <Route element={<Guest />}>
                   <Route path="login" element={<LoginPage />} />

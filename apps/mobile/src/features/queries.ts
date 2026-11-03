@@ -11,6 +11,7 @@ import {
   type CategoryStatDto,
   type CategoryType,
   type InviteDto,
+  type NoteDto,
   type Paginated,
   type SummaryDto,
   type TransactionCreate,
@@ -273,5 +274,37 @@ export function useDeleteCategory() {
   return useMutation({
     mutationFn: (id: string) => api<void>(bookPath(bookId!, `/categories/${id}`), { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+}
+
+// ---------- 메모 (현재 가계부) ----------
+
+export function useNotes() {
+  const bookId = useBookId();
+  return useQuery({
+    queryKey: ['notes', bookId],
+    queryFn: () => api<NoteDto[]>(bookPath(bookId!, '/notes')),
+    enabled: !!bookId,
+  });
+}
+
+export function useSaveNote() {
+  const qc = useQueryClient();
+  const bookId = useBookId();
+  return useMutation({
+    mutationFn: ({ id, content }: { id?: string; content: string }) =>
+      id
+        ? api<NoteDto>(bookPath(bookId!, `/notes/${id}`), { method: 'PATCH', body: { content } })
+        : api<NoteDto>(bookPath(bookId!, '/notes'), { method: 'POST', body: { content } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes', bookId] }),
+  });
+}
+
+export function useDeleteNote() {
+  const qc = useQueryClient();
+  const bookId = useBookId();
+  return useMutation({
+    mutationFn: (id: string) => api<void>(bookPath(bookId!, `/notes/${id}`), { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notes', bookId] }),
   });
 }

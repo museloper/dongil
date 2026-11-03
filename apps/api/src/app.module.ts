@@ -10,6 +10,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 import { BudgetsModule } from './modules/budgets/budgets.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { ExportModule } from './modules/export/export.module';
+import { NotesModule } from './modules/notes/notes.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ExportModule } from './modules/export/export.module';
     BudgetsModule,
     StatsModule,
     ExportModule,
+    NotesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }],
 })

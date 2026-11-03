@@ -17,6 +17,8 @@ const ICONS = {
   'business-outline': io.businessOutline,
   'calendar-outline': io.calendarOutline,
   'card-outline': io.cardOutline,
+  'document-text-outline': io.documentTextOutline,
+  'time-outline': io.timeOutline,
   'cash-outline': io.cashOutline,
   checkmark: io.checkmark,
   'checkmark-circle': io.checkmarkCircle,

@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatWon, toLocalDateKey, TransactionCreateSchema, type TransactionDto, type TxType } from '@dongil/shared';
 import { useAccounts, useCategories, useDeleteTransaction, useSaveTransaction } from '@/features/queries';
 import { closeModal } from '@/lib/nav';
-import { formatDayLabel, shiftDay, withDateKey } from '@/lib/date';
+import { formatDayLabel, formatTimeLabel, shiftDay, toTimeKey, withDateKey, withTimeKey } from '@/lib/date';
 import { useTheme } from '@/theme/theme';
 import { CategoryIcon } from './category-icon';
 import { Keypad } from './keypad';
@@ -31,12 +31,14 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const [memo, setMemo] = useState(initial?.memo ?? '');
   const [keypadOpen, setKeypadOpen] = useState(!initial);
   const [showPicker, setShowPicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const accountList = accounts.data ?? [];
   const cats = (categories.data ?? []).filter((c) => c.type === type);
   const fromId = accountId ?? accountList[0]?.id ?? null;
   const dateKey = toLocalDateKey(new Date(occurredAt));
+  const timeKey = toTimeKey(occurredAt);
 
   const changeType = (t: TxType) => {
     setType(t);
@@ -189,6 +191,37 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
               )}
             </Field>
 
+            <Field label="시간">
+              <PressableScale
+                onPress={() => Platform.OS === 'android' && setShowTimePicker(true)}
+                style={[styles.dateRow, styles.timeRow, { backgroundColor: colors.fill }]}
+                scaleTo={0.98}>
+                <Ionicons name="time-outline" size={16} color={colors.textSub} />
+                <AppText>{formatTimeLabel(timeKey)}</AppText>
+                {Platform.OS === 'ios' && (
+                  <DateTimePicker
+                    value={timePickerValue(timeKey)}
+                    mode="time"
+                    display="compact"
+                    locale="ko-KR"
+                    style={{ marginLeft: 'auto' }}
+                    onValueChange={(_e, d) => setOccurredAt(withTimeKey(occurredAt, fromTimePicker(d)))}
+                  />
+                )}
+              </PressableScale>
+              {Platform.OS === 'android' && showTimePicker && (
+                <DateTimePicker
+                  value={timePickerValue(timeKey)}
+                  mode="time"
+                  onValueChange={(_e, d) => {
+                    setShowTimePicker(false);
+                    setOccurredAt(withTimeKey(occurredAt, fromTimePicker(d)));
+                  }}
+                  onDismiss={() => setShowTimePicker(false)}
+                />
+              )}
+            </Field>
+
             <Field label="메모">
               <TextInput
                 value={memo}
@@ -209,6 +242,19 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
       )}
     </KeyboardAvoidingView>
   );
+}
+
+/**
+ * 시간 선택기는 기기 시간대로 시:분을 보여주므로, KST 시:분을 기기 로컬 시:분으로 옮겨 담는다.
+ * 기기 시간대가 KST 가 아니어도 화면에 보이는 시간과 저장되는 KST 시간이 같아진다.
+ */
+function timePickerValue(time: string) {
+  const [h, m] = time.split(':').map(Number);
+  return new Date(2000, 0, 1, h, m);
+}
+
+function fromTimePicker(d: Date) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -258,6 +304,7 @@ const styles = StyleSheet.create({
   },
   dateRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 14, paddingHorizontal: 6, height: 52 },
   dateCenter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeRow: { justifyContent: 'flex-start', gap: 6, paddingHorizontal: 16 },
   memo: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15 },
   footer: { paddingHorizontal: 20, paddingTop: 12, gap: 8, borderTopWidth: StyleSheet.hairlineWidth },
 });
