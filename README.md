@@ -58,3 +58,17 @@ pnpm test:e2e    # 실제 DB: 인증/토큰 회전, 거래 CRUD 잔액 정합성
 - JWT 시크릿은 루트 `.env` 에 `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` 으로 둔다(`env_file`). 파일이 없으면 prod 실행을 거부하고, DB 만 띄우는 `pnpm db:up` 은 그대로 된다.
 - 포트는 `127.0.0.1` 에만 열린다. 폰에서는 `tailscale serve --bg --https=8443 http://127.0.0.1:3000` 으로 접속한다.
 - 운영 컨테이너가 3000 을 쓰므로, 개발 서버(`pnpm dev`)를 띄우기 전에 `docker compose stop api` 한다.
+
+### 운영 스크립트
+
+| 작업 | Windows | 맥 |
+|---|---|---|
+| 시작 | `scripts\windows\start.cmd` | `./scripts/mac/start.sh` |
+| 업데이트 | `scripts\windows\update.cmd` | `./scripts/mac/update.sh` |
+| 종료 | `scripts\windows\stop.cmd` | `./scripts/mac/stop.sh` |
+
+- **시작:** 웹(127.0.0.1:4173), Docker, API·DB 컨테이너를 띄우고 응답을 확인한다.
+- **업데이트:** `main` 을 pull 해서 의존성 설치, 웹 빌드, API 이미지 재빌드(마이그레이션 자동 적용) 후 재기동한다. main 이 아니거나 커밋하지 않은 변경이 있으면 멈춘다. 모바일 앱은 다시 빌드하지 않는다.
+- **종료:** 웹과 컨테이너를 멈춘다. 데이터는 지우지 않고 Docker Desktop 도 끄지 않는다.
+- **먼저 필요한 파일:** 루트 `.env`(JWT 시크릿), `apps/web/.env.local`(`VITE_API_URL=https://<기기>.<tailnet>.ts.net:8443/api/v1`).
+- 웹은 Tailscale 로 연다: `tailscale serve --bg --https=10000 http://127.0.0.1:4173`
