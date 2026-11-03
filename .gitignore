@@ -5,3 +5,4 @@ dist/
 .expo/
 *.log
 coverage/
+dev-dist/
