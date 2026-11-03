@@ -1,9 +1,10 @@
 # 돈길 (Dongil)
 
-React Native(Expo) 앱 + NestJS API + PostgreSQL 로 만든 개인 가계부.
+React Native(Expo) 앱 + PWA 웹앱 + NestJS API + PostgreSQL 로 만든 개인 가계부.
 
 ```
 apps/mobile     Expo SDK 57 앱 (Expo Router, Reanimated, TanStack Query, Zustand, react-native-svg)
+apps/web        PWA 웹앱 (Vite, React, TanStack Query, 홈 화면 설치) — apps/web/README.md
 apps/api        NestJS 11 + Prisma 6 API 서버
 packages/shared 앱/서버 공용 Zod 스키마 · 타입 · 금액/날짜 유틸
 ```
@@ -19,6 +20,7 @@ cp apps/api/.env.example apps/api/.env
 pnpm --filter @dongil/shared build
 cd apps/api && npx prisma migrate deploy && pnpm dev   # http://localhost:3000/api/v1, 문서 /api/docs
 cd apps/mobile && npx expo start             # Expo Go 로 QR 스캔, 또는 w 로 웹 미리보기
+cd apps/web && pnpm dev                      # PWA 웹앱 http://localhost:5173
 ```
 
 - 앱은 Expo 개발 서버가 떠 있는 PC 의 LAN IP:3000 으로 API 를 찾습니다. 다른 주소를 쓰려면 `EXPO_PUBLIC_API_URL` 설정.

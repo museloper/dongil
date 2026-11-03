@@ -1,9 +1,10 @@
 # 돈길 (dongil)
 
-개인 가계부. Expo 모바일 앱과 NestJS API, PostgreSQL 로 구성된 pnpm 모노레포.
+개인 가계부. Expo 모바일 앱, PWA 웹앱, NestJS API, PostgreSQL 로 구성된 pnpm 모노레포.
 
 ```
 apps/mobile      Expo SDK 57 (RN 0.86, Expo Router, Reanimated 4, TanStack Query, Zustand, react-native-svg)
+apps/web         PWA · Vite 8 + React 19 (react-router 7, TanStack Query, Zustand, vite-plugin-pwa)
 apps/api         NestJS 11 + Prisma 6 + PostgreSQL 16
 packages/shared  앱·서버 공용 Zod 스키마, DTO 타입, 금액/날짜 유틸 (@dongil/shared)
 ```
@@ -23,10 +24,23 @@ cd apps/mobile
   npx expo start                      # Expo Go / w 로 웹 미리보기 (8081)
   npx expo install <pkg>              # 모바일 의존성은 반드시 이걸로 (SDK 호환 버전)
   npx tsc --noEmit && npx expo lint   # 작업 끝나면 둘 다 통과시킬 것
+cd apps/web
+  pnpm dev                            # http://localhost:5173 (--host 라 LAN 에도 열림)
+  pnpm lint && pnpm build             # build 가 tsc 까지 돌린다
+  pnpm preview                        # 서비스워커·설치 확인은 빌드 결과로
 ```
 
-변경 후 최소 검증: shared 빌드, API `test` + `test:e2e`, mobile `tsc` + `lint`.
-화면을 바꿨다면 웹 미리보기로 직접 확인한다.
+변경 후 최소 검증: shared 빌드, API `test` + `test:e2e`, mobile `tsc` + `lint`, web `lint` + `build`.
+화면을 바꿨다면 모바일은 웹 미리보기, 웹은 브라우저(모바일 폭)로 직접 확인한다.
+
+## 문서 지도
+
+| 작업 | 문서 |
+|---|---|
+| 모바일 화면·Expo API | `apps/mobile/AGENTS.md` + 아래 "모바일 규칙" |
+| 웹(PWA) 화면·서비스워커·아이콘 | `apps/web/CLAUDE.md` |
+| 모바일·웹 중 한쪽 UI 를 고칠 때 | 아래 "모바일·웹 UI 동기화" |
+| 배포·포트·Tailscale | `README.md` 의 배포 절 |
 
 ## 도메인 규칙 (깨지면 데이터가 틀어짐)
 
@@ -73,19 +87,25 @@ cd apps/mobile
 - 토큰 저장은 `src/lib/storage.ts` 를 쓴다. 네이티브는 SecureStore, `.web.ts` 는 localStorage 다.
 - 날짜 선택은 `@react-native-community/datetimepicker` v9 를 쓴다. `onChange` 는 deprecated 이므로 `onValueChange`/`onDismiss` 를 쓴다.
 
-## 웹(PWA) 동기화 — dongil-web
+## 웹 규칙 (요약, 상세는 `apps/web/CLAUDE.md`)
 
-같은 서비스의 웹 버전이 별도 저장소 [museloper/dongil-web](https://github.com/museloper/dongil-web) (로컬 `../dongil-web`)에 있다. 사용자는 두 앱을 같은 서비스로 쓰므로 화면이 어긋나면 안 된다.
+- shared 는 workspace 로 쓰되 Vite·tsconfig 가 `packages/shared/src` **소스**를 바로 읽는다(dist 는 CommonJS 라 Vite 에서 못 씀). shared 빌드 없이도 웹은 동작한다.
+- 색은 `tokens.ts` 를 CSS 변수(`var(--token)`)로만 쓴다. 아이콘은 `<Icon>` 에 등록된 Ionicons 이름만 그려진다.
+- 서비스워커는 앱 셸만 캐시하고 API 응답은 캐시하지 않는다(오래된 잔액 방지).
 
-- **UI/UX 변경은 모바일(`apps/mobile`)과 dongil-web 양쪽에 함께 반영한다.** 한쪽만 고치고 끝내지 않는다.
-  - 대상: 화면 구성·흐름, 문구, 새 화면·기능, 색 토큰(`tokens.ts` 는 양쪽 값이 같아야 함), 아이콘·카테고리 아이콘 선택지, 빈/에러 상태.
-  - 같은 작업 단위로 양쪽에 커밋한다. 이번에 반대쪽을 못 하면 그 저장소에 이슈를 남기고 서로 링크한다.
-- **`packages/shared` 를 바꾸면** dongil-web 에서 `npm run sync-shared` 로 가져온다(웹은 복사본을 쓴다).
-- 플랫폼 특성 때문에 일부러 다르게 한 부분은 dongil-web CLAUDE.md 의 "모바일 앱과 다른 점"에 적는다. 거기 없는 차이는 동기화 누락으로 본다.
+## 모바일·웹 UI 동기화
+
+사용자는 모바일 앱과 웹을 같은 서비스로 쓰므로 화면이 어긋나면 안 된다.
+
+- **UI/UX 변경은 `apps/mobile` 과 `apps/web` 에 같은 커밋(또는 같은 PR)으로 함께 반영한다.** 한쪽만 고치고 끝내지 않는다.
+  - 대상: 화면 구성·흐름, 문구, 새 화면·기능, 색 토큰(두 `tokens.ts` 값이 같아야 함), 아이콘·카테고리 아이콘 선택지, 빈/에러 상태.
+  - 이번에 한쪽을 못 하면 이슈를 남긴다.
+- 플랫폼 특성 때문에 일부러 다르게 한 부분은 `apps/web/CLAUDE.md` 의 "모바일 앱과 다른 점"에 적는다. 거기 없는 차이는 동기화 누락으로 본다.
 - 파일 대응(모바일 ↔ 웹):
   - `src/app/(tabs)/<탭>.tsx` ↔ `src/pages/<탭>.tsx` (홈 `index.tsx` ↔ `home.tsx`)
   - `src/app/<이름>.tsx` ↔ `src/pages/<이름>.tsx`, `(auth)/*` ↔ `auth.tsx`, `transaction/*` ↔ `transaction.tsx`
   - `src/components/*` ↔ 같은 이름 (`auth-form` ↔ `auth-shell`), `src/features/queries.ts`·`src/lib/*` ↔ 같은 경로
+  - 웹 전용(대응 없음): `dialog`, `icon`, `install-gate`, `update-prompt`
 
 ## 환경 함정
 
@@ -94,6 +114,8 @@ cd apps/mobile
 - **운영 API 컨테이너(`dongil-api-1`)가 3000 을 쓴다.** `pnpm dev` 전에 `docker compose stop api`, 끝나면 `docker compose --profile prod up -d`.
 - **pnpm 10 은 설치 스크립트를 막는다.** Prisma 처럼 빌드가 필요한 패키지는 루트 `package.json` 의 `pnpm.onlyBuiltDependencies` 에 추가한다.
 - `.npmrc` 의 `node-linker=hoisted` 는 Expo 호환 때문에 필요하다. 지우지 않는다.
+- **React 는 모노레포에 한 벌만 있어야 한다.** 버전은 Expo SDK 가 정하므로 `apps/web` 의 `react`·`react-dom`·`@types/react` 를 `apps/mobile` 과 같은 값으로 고정한다. Expo SDK 를 올리면 웹도 같이 맞춘다.
+  - 같은 이유로 웹의 react-router 는 7 을 쓴다(8 은 react 19.2.7 이상 요구).
 - **웹 미리보기 한정 현상:**
   - Reanimated `AnimatedPressable` 이 `aria-label` 을 버린다.
   - react-native-svg 의 `transform-origin` 경고가 개발 모드에서 뜬다.
@@ -106,3 +128,40 @@ cd apps/mobile
 ## 미구현 (2차)
 
 정기 거래 자동 등록(`RecurringRule` 테이블만 있음), 예산 초과 푸시 알림, 생체인증 잠금, 홈 위젯.
+
+---
+
+# 전역 개발 규칙
+
+(사용자 전역 규칙(`~/.claude/CLAUDE.md`)의 복사본. 다른 기기에서도 보이도록 저장소에 둔다. 프로젝트에 국한되지 않는 새 규칙이 생기면 여기와 전역 파일 양쪽에 반영한다.)
+
+## 커밋 컨벤션
+
+**Conventional Commits**를 따른다. 커밋 메시지를 작성/생성할 때 항상 지킬 것.
+
+- 형식: `<type>(<scope>): <subject>` — scope는 선택.
+- type: `feat`(기능 추가) · `fix`(버그 수정) · `docs`(문서만 변경) · `test`(테스트만 추가/수정) · `refactor`(동작 변화 없는 구조 변경) · `chore`(빌드/설정/의존성) · `style`(포매팅) · `perf`(성능) 중 하나.
+- subject는 소문자로 시작하는 명령형 한 줄, 끝에 마침표 없음.
+- 본문(body)은 "무엇을 바꿨는지"가 아니라 **"왜 바꿨는지"**를 설명할 때만 추가한다 — diff를 보면 무엇이 바뀌었는지는 이미 알 수 있다.
+
+## 커밋 전 검증
+
+커밋하기 전에 해당 프로젝트의 typecheck·lint·test가 통과하는 상태여야 한다. 프로젝트마다 정확한 명령어는 다르므로(`npx tsc --noEmit` / `npm run lint` / `npx vitest run` 등), 그 프로젝트의 CLAUDE.md·package.json scripts·CI 설정에서 실제 명령어를 확인해 실행할 것.
+
+## 이슈 정리
+
+이슈를 닫기 전에 하위 이슈(sub-issue) 상태를 확인한다(`gh api repos/{owner}/{repo}/issues/{n}/sub_issues`). 하위가 하나라도 열려 있으면 상위는 닫지 않는다. 해결 근거를 코드·커밋에서 확인하지 못한 이슈는 닫지 말고 사용자에게 묻는다.
+
+## PR 작성
+
+- **Assignees**에 PR 작성자, **Reviewers**에 작성자를 뺀 팀원(쓰기 권한자) 전원을 지정한다.
+- 종류(feat/fix/…)와 영역 **Labels**를 붙이고, 관련 이슈는 본문에 `Closes #n`으로 써서 **Development**에 연결한다. 팀이 GitHub Projects를 쓰면 **Projects**에도 넣는다.
+- 저장소에 이를 자동으로 해 주는 워크플로가 있어도 `gh pr create`로 직접 올릴 때는 `--assignee @me --reviewer … --label …`로 직접 채운다 — `pull_request_target` 워크플로는 base 브랜치의 파일로 돌기 때문에 스택 PR 등에서는 돌지 않는다.
+- PR 템플릿이 있으면 그 섹션 구조를 따르고, 하지 않은 테스트는 체크하지 않으며 확인하지 못한 것을 적는다.
+
+## 프로젝트 CLAUDE.md 계층
+
+- 루트 CLAUDE.md는 매 세션 통째로 로드된다. 전역 규칙과 "놓치면 버그가 되는" 한 줄 요약만 두고 길이를 지킨다.
+- 기능별 상세는 그 디렉토리의 CLAUDE.md에 두고, 루트에 **문서 지도**(어떤 작업 → 어떤 문서)를 둔다.
+- 하위 CLAUDE.md는 그 디렉토리의 파일을 열 때만 로드된다. 다른 디렉토리(lib, composables 등)에서 그 기능을 건드릴 때 놓치지 않도록 루트에 요약과 경로를 남긴다.
+- 코드·git 이력으로 알 수 있는 것은 적지 않는다. 코드로 알 수 없는 "왜"와 도메인 룰만 적는다.

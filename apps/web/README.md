@@ -1,7 +1,7 @@
 # 돈길 웹 (PWA)
 
 개인·공유 가계부 **돈길**의 설치형 웹앱 버전입니다. 브라우저에서 바로 쓰거나, 홈 화면에 추가해 앱처럼 쓸 수 있습니다.
-백엔드는 [museloper/dongil](https://github.com/museloper/dongil) 저장소의 NestJS API 를 사용합니다.
+백엔드는 같은 모노레포의 `apps/api`(NestJS) 를 사용합니다.
 
 ## 기능
 
@@ -19,12 +19,13 @@
 ## 시작하기
 
 ```bash
-# 1) API 실행 (dongil 저장소)
-cd ../dongil && pnpm db:up && cd apps/api && pnpm dev   # http://localhost:3000/api/v1
+# 저장소 루트에서
+pnpm install
+pnpm db:up
+cd apps/api && pnpm dev     # http://localhost:3000/api/v1
 
-# 2) 웹앱 실행
-npm install
-npm run dev        # http://localhost:5173
+# 다른 터미널에서
+cd apps/web && pnpm dev     # http://localhost:5173
 ```
 
 같은 와이파이의 휴대폰에서는 `http://<PC IP>:5173` 으로 접속하면 됩니다. API 주소는 기본적으로 `접속한 호스트:3000` 을 쓰고, 다르면 `.env` 에 `VITE_API_URL` 을 지정합니다(`.env.example` 참고).
@@ -34,12 +35,12 @@ npm run dev        # http://localhost:5173
 ## 빌드·배포
 
 ```bash
-npm run build      # dist/ 생성 (서비스워커 포함)
-npm run preview    # 빌드 결과 확인
+pnpm build         # dist/ 생성 (서비스워커 포함)
+pnpm preview       # 빌드 결과 확인
 ```
 
 `dist/` 는 정적 파일이라 Vercel·Netlify·Cloudflare Pages·Nginx 등 어디에나 올릴 수 있습니다. 클라이언트 라우팅을 쓰므로 모르는 경로는 `index.html` 로 돌려주도록(SPA fallback) 설정하세요.
 
 ## 공용 코드
 
-`src/shared/` 는 dongil 저장소 `packages/shared/src` 의 복사본입니다(Zod 스키마, DTO 타입, 금액/날짜 유틸). 서버와 검증 규칙이 어긋나지 않도록 직접 고치지 말고, dongil 쪽을 수정한 뒤 `npm run sync-shared` 로 가져옵니다.
+Zod 스키마, DTO 타입, 금액/날짜 유틸은 `packages/shared` 를 그대로 씁니다(`@dongil/shared`). 서버·모바일과 같은 코드라 검증 규칙이 어긋나지 않습니다.
