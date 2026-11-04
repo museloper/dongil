@@ -30,7 +30,7 @@ export class ExportController {
       include: txInclude,
       orderBy: { occurredAt: 'asc' },
     });
-    const header = ['날짜', '구분', '카테고리', '금액', '계좌', '받는계좌', '메모', '작성자'];
+    const header = ['날짜', '구분', '카테고리', '금액', '계좌', '받는계좌', '메모', '작성자', '중요도', '태그'];
     const lines = rows.map((t) =>
       [
         toLocalDateKey(t.occurredAt),
@@ -41,6 +41,8 @@ export class ExportController {
         t.toAccount?.name,
         t.memo,
         t.createdBy.nickname,
+        t.importance,
+        t.tags.map((tag) => tag.name).join(' '),
       ]
         .map(csvCell)
         .join(','),

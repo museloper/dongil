@@ -47,6 +47,7 @@ const ICONS = {
   'phone-portrait-outline': io.phonePortraitOutline,
   'pie-chart': io.pieChart,
   'pie-chart-outline': io.pieChartOutline,
+  'pricetag-outline': io.pricetagOutline,
   'pricetags-outline': io.pricetagsOutline,
   receipt: io.receipt,
   'receipt-outline': io.receiptOutline,

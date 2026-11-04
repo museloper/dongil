@@ -5,8 +5,19 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatWon, toLocalDateKey, TransactionCreateSchema, type TransactionDto, type TxType } from '@dongil/shared';
-import { useAccounts, useCategories, useCurrentBook, useDeleteTransaction, useSaveTransaction } from '@/features/queries';
+import {
+  formatWon,
+  IMPORTANCE_LEVELS,
+  TAG_MAX_LENGTH,
+  TAG_MAX_PER_TRANSACTION,
+  TagNameSchema,
+  toLocalDateKey,
+  TransactionCreateSchema,
+  type Importance,
+  type TransactionDto,
+  type TxType,
+} from '@dongil/shared';
+import { useAccounts, useCategories, useCurrentBook, useDeleteTransaction, useSaveTransaction, useTags } from '@/features/queries';
 import { closeModal } from '@/lib/nav';
 import { formatDayLabel, formatTimeLabel, shiftDay, toTimeKey, withDateKey, withTimeKey } from '@/lib/date';
 import { useTheme } from '@/theme/theme';
@@ -21,6 +32,7 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const { book } = useCurrentBook();
   const categories = useCategories();
   const save = useSaveTransaction();
+  const usedTags = useTags();
   const remove = useDeleteTransaction();
 
   const [type, setType] = useState<TxType>(initial?.type ?? 'EXPENSE');
@@ -30,6 +42,9 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const [toAccountId, setToAccountId] = useState<string | null>(initial?.toAccount?.id ?? null);
   const [occurredAt, setOccurredAt] = useState(initial?.occurredAt ?? new Date().toISOString());
   const [memo, setMemo] = useState(initial?.memo ?? '');
+  const [importance, setImportance] = useState<Importance | null>(initial?.importance ?? null);
+  const [tags, setTags] = useState<string[]>(initial?.tags.map((t) => t.name) ?? []);
+  const [tagInput, setTagInput] = useState('');
   const [keypadOpen, setKeypadOpen] = useState(!initial);
   const [showPicker, setShowPicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -40,6 +55,7 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
     (a, b) => Number(b.id === book?.defaultAccountId) - Number(a.id === book?.defaultAccountId),
   );
   const cats = (categories.data ?? []).filter((c) => c.type === type);
+  const suggestions = (usedTags.data ?? []).filter((t) => !tags.includes(t.name));
   const fromId = accountId ?? accountList[0]?.id ?? null;
   const dateKey = toLocalDateKey(new Date(occurredAt));
   const timeKey = toTimeKey(occurredAt);
@@ -48,6 +64,16 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
     setType(t);
     // 수입/지출이 바뀌면 카테고리 종류가 달라지므로 초기화
     if (t !== type) setCategoryId(null);
+  };
+
+  const addTag = (raw: string) => {
+    const parsed = TagNameSchema.safeParse(raw);
+    if (!parsed.success) return setError(parsed.error.issues[0].message);
+    if (tags.length >= TAG_MAX_PER_TRANSACTION && !tags.includes(parsed.data)) return setError(`태그는 ${TAG_MAX_PER_TRANSACTION}개까지 달 수 있습니다`);
+    setError(null);
+    if (!tags.includes(parsed.data)) setTags([...tags, parsed.data]);
+    // 추천 태그를 눌렀을 때는 입력 중인 내용을 지우지 않는다
+    if (raw === tagInput) setTagInput('');
   };
 
   const submit = () => {
@@ -59,6 +85,9 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
       categoryId: type === 'TRANSFER' ? null : categoryId,
       memo: memo.trim() || null,
       occurredAt,
+      importance: type === 'EXPENSE' ? importance : null,
+      // 입력해 두고 추가를 누르지 않은 태그도 함께 저장한다
+      tags: type === 'EXPENSE' ? (tagInput.trim() ? [...tags, tagInput] : tags) : [],
     };
     if (!amount) return setError('금액을 입력하세요');
     const parsed = TransactionCreateSchema.safeParse(body);
@@ -236,6 +265,49 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
                 style={[styles.memo, { backgroundColor: colors.fill, color: colors.text }]}
               />
             </Field>
+
+            {type === 'EXPENSE' && (
+              <>
+                <Field label="중요도">
+                  <View style={styles.tagInputRow}>
+                    {IMPORTANCE_LEVELS.map((level) => (
+                      <Chip key={level} label={level} active={importance === level} onPress={() => setImportance(importance === level ? null : level)} />
+                    ))}
+                  </View>
+                </Field>
+
+                <Field label="태그">
+                  {tags.length > 0 && (
+                    <View style={styles.tagWrap}>
+                      {tags.map((name) => (
+                        <Chip key={name} label={`#${name} ×`} active onPress={() => setTags(tags.filter((t) => t !== name))} />
+                      ))}
+                    </View>
+                  )}
+                  <View style={styles.tagInputRow}>
+                    <TextInput
+                      value={tagInput}
+                      onChangeText={setTagInput}
+                      placeholder="여행, 명절처럼 묶어 볼 이름"
+                      placeholderTextColor={colors.textMuted}
+                      maxLength={TAG_MAX_LENGTH + 1}
+                      returnKeyType="done"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => tagInput.trim() && addTag(tagInput)}
+                      style={[styles.memo, { flex: 1, backgroundColor: colors.fill, color: colors.text }]}
+                    />
+                    <Chip label="추가" active={false} onPress={() => addTag(tagInput)} />
+                  </View>
+                  {suggestions.length > 0 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
+                      {suggestions.map((t) => (
+                        <Chip key={t.id} label={`#${t.name}`} active={false} onPress={() => addTag(t.name)} />
+                      ))}
+                    </ScrollView>
+                  )}
+                </Field>
+              </>
+            )}
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: insets.bottom + 12, borderTopColor: colors.border }]}>
@@ -310,5 +382,7 @@ const styles = StyleSheet.create({
   dateCenter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   timeRow: { justifyContent: 'flex-start', gap: 6, paddingHorizontal: 16 },
   memo: { height: 52, borderRadius: 14, paddingHorizontal: 16, fontSize: 15 },
+  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tagInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   footer: { paddingHorizontal: 20, paddingTop: 12, gap: 8, borderTopWidth: StyleSheet.hairlineWidth },
 });

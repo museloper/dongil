@@ -33,6 +33,16 @@ export interface CategoryDto {
 type AccountRef = Pick<AccountDto, 'id' | 'name' | 'color'>;
 type CategoryRef = Pick<CategoryDto, 'id' | 'name' | 'icon' | 'color'>;
 
+export type Importance = 'A' | 'B' | 'C';
+
+/** 태그와 그 태그가 달린 지출의 전체 기간 건수·합계 */
+export interface TagDto {
+  id: string;
+  name: string;
+  count: number;
+  total: number;
+}
+
 export interface TransactionDto {
   id: string;
   type: TxType;
@@ -42,6 +52,8 @@ export interface TransactionDto {
   account: AccountRef;
   toAccount: AccountRef | null;
   category: CategoryRef | null;
+  importance: Importance | null;
+  tags: Pick<TagDto, 'id' | 'name'>[];
   /** 거래를 기록한 사람 (공유 가계부에서 표시) */
   author: { id: string; nickname: string };
 }

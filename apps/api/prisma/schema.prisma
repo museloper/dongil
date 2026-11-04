@@ -69,6 +69,7 @@ model Book {
   budgets      Budget[]
   recurring    RecurringRule[]
   notes        BookNote[]
+  tags         Tag[]
 }
 
 model BookMember {
@@ -153,8 +154,12 @@ model Transaction {
   memo        String?
   occurredAt  DateTime
   recurringId String?
+  /// 지출에만 쓴다
+  importance  Importance?
   createdAt   DateTime @default(now())
 
+  /// 지출에만 쓴다
+  tags      Tag[]
   book      Book           @relation(fields: [bookId], references: [id], onDelete: Cascade)
   createdBy User           @relation("TxAuthor", fields: [createdById], references: [id], onDelete: Cascade)
   account   Account        @relation("TxAccount", fields: [accountId], references: [id])
@@ -164,6 +169,25 @@ model Transaction {
 
   @@index([bookId, occurredAt(sort: Desc)])
   @@index([bookId, categoryId])
+}
+
+enum Importance {
+  A
+  B
+  C
+}
+
+/// 거래를 저장할 때 이름으로 만들어진다. 쓰는 거래가 없는 태그는 목록에 나오지 않는다.
+model Tag {
+  id        String   @id @default(cuid())
+  bookId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  book         Book          @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([bookId, name])
 }
 
 model Budget {

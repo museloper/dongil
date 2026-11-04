@@ -895,3 +895,27 @@ button.plain {
   position: relative;
   cursor: pointer;
 }
+
+.importance-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--primarySoft);
+}
+
+.tag-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 4px;
+  text-align: left;
+}

@@ -1,11 +1,25 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { formatSigned, type TransactionDto } from '@dongil/shared';
+import { formatSigned, toLocalDateKey, type TransactionDto } from '@dongil/shared';
 import { useCurrentBook } from '@/features/queries';
 import { useTheme } from '@/theme/theme';
 import { formatTimeLabel, toTimeKey } from '@/lib/date';
 import { CategoryIcon } from './category-icon';
 import { AppText, PressableScale } from './ui';
+
+/** 날짜별 묶음과 그날의 수입-지출 */
+export function groupByDay(items: TransactionDto[]) {
+  const map = new Map<string, TransactionDto[]>();
+  for (const tx of items) {
+    const key = toLocalDateKey(new Date(tx.occurredAt));
+    map.set(key, [...(map.get(key) ?? []), tx]);
+  }
+  return [...map.entries()].map(([day, data]) => ({
+    day,
+    data,
+    net: data.reduce((a, t) => a + (t.type === 'INCOME' ? t.amount : t.type === 'EXPENSE' ? -t.amount : 0), 0),
+  }));
+}
 
 export function TransactionRow({ tx }: { tx: TransactionDto }) {
   const { colors } = useTheme();
@@ -31,10 +45,22 @@ export function TransactionRow({ tx }: { tx: TransactionDto }) {
         color={isTransfer ? colors.textSub : (tx.category?.color ?? colors.textMuted)}
       />
       <View style={styles.body}>
-        <AppText numberOfLines={1}>{title}</AppText>
+        <View style={styles.titleRow}>
+          <AppText numberOfLines={1} style={{ flexShrink: 1 }}>{title}</AppText>
+          {tx.importance ? (
+            <View style={[styles.importance, { backgroundColor: colors.primarySoft }]}>
+              <AppText variant="caption" tone="primary">{tx.importance}</AppText>
+            </View>
+          ) : null}
+        </View>
         {sub ? (
           <AppText variant="caption" tone="textSub" numberOfLines={1}>
             {sub}
+          </AppText>
+        ) : null}
+        {tx.tags.length ? (
+          <AppText variant="caption" tone="primary" numberOfLines={1}>
+            {tx.tags.map((t) => `#${t.name}`).join(' ')}
           </AppText>
         ) : null}
       </View>
@@ -48,4 +74,6 @@ export function TransactionRow({ tx }: { tx: TransactionDto }) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 4 },
   body: { flex: 1, gap: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  importance: { paddingHorizontal: 6, borderRadius: 6 },
 });

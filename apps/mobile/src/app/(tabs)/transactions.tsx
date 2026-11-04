@@ -5,7 +5,7 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 import { compactWon, formatWon, toLocalDateKey, type TransactionDto, type TxType } from '@dongil/shared';
 import { MonthSwitcher } from '@/components/month-switcher';
 import { Fab, Screen } from '@/components/screen';
-import { TransactionRow } from '@/components/transaction-row';
+import { groupByDay, TransactionRow } from '@/components/transaction-row';
 import { AppText, Card, Chip, EmptyState, ErrorState, Loading, Segmented, haptic } from '@/components/ui';
 import { monthFilter, useCalendar, useDeleteTransaction, useTransactions, type TxFilter } from '@/features/queries';
 import { dayOfWeek, dayRangeIso, daysInMonth, formatDayLabel } from '@/lib/date';
@@ -44,19 +44,6 @@ export default function TransactionsScreen() {
 
 // ---------------- 리스트 ----------------
 
-function groupByDay(items: TransactionDto[]) {
-  const map = new Map<string, TransactionDto[]>();
-  for (const tx of items) {
-    const key = toLocalDateKey(new Date(tx.occurredAt));
-    map.set(key, [...(map.get(key) ?? []), tx]);
-  }
-  return [...map.entries()].map(([day, data]) => ({
-    day,
-    data,
-    net: data.reduce((a, t) => a + (t.type === 'INCOME' ? t.amount : t.type === 'EXPENSE' ? -t.amount : 0), 0),
-  }));
-}
-
 function ListView() {
   const { colors } = useTheme();
   const month = useMonth((s) => s.month);
@@ -86,7 +73,7 @@ function ListView() {
           <TextInput
             value={q}
             onChangeText={setQ}
-            placeholder="메모, 카테고리 검색"
+            placeholder="메모, 카테고리, 태그 검색"
             placeholderTextColor={colors.textMuted}
             style={{ flex: 1, color: colors.text, fontSize: 15 }}
             returnKeyType="search"

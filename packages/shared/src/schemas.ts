@@ -76,6 +76,15 @@ export const CategoryUpdateSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
 });
 
+export const IMPORTANCE_LEVELS = ['A', 'B', 'C'] as const;
+export const TAG_MAX_LENGTH = 20;
+export const TAG_MAX_PER_TRANSACTION = 10;
+/** 앞에 붙인 # 은 표시용이므로 저장할 때 뺀다 */
+export const TagNameSchema = z
+  .string()
+  .transform((s) => s.replace(/^#+/, '').trim())
+  .pipe(z.string().min(1, '태그를 입력하세요').max(TAG_MAX_LENGTH, `태그는 ${TAG_MAX_LENGTH}자까지 쓸 수 있습니다`));
+
 const transactionBase = z.object({
   type: TxTypeEnum,
   amount,
@@ -84,10 +93,18 @@ const transactionBase = z.object({
   categoryId: z.string().min(1).nullish(),
   memo: z.string().max(100).nullish(),
   occurredAt: z.string().datetime({ offset: true }),
+  /** 보내지 않으면(이전 버전 앱) 수정할 때 기존 값을 유지한다. null 이면 지운다 */
+  importance: z.enum(IMPORTANCE_LEVELS).nullish(),
+  /** 보내지 않으면(이전 버전 앱) 수정할 때 기존 값을 유지한다. 빈 배열이면 모두 뗀다 */
+  tags: z.array(TagNameSchema).max(TAG_MAX_PER_TRANSACTION, `태그는 ${TAG_MAX_PER_TRANSACTION}개까지 달 수 있습니다`).optional(),
 });
 
 type TxShape = z.infer<typeof transactionBase>;
 function refineTx(v: TxShape, ctx: z.RefinementCtx) {
+  if (v.type !== 'EXPENSE') {
+    if (v.importance) ctx.addIssue({ code: 'custom', path: ['importance'], message: '중요도는 지출에만 달 수 있습니다' });
+    if (v.tags?.length) ctx.addIssue({ code: 'custom', path: ['tags'], message: '태그는 지출에만 달 수 있습니다' });
+  }
   if (v.type === 'TRANSFER') {
     if (!v.toAccountId) ctx.addIssue({ code: 'custom', path: ['toAccountId'], message: '이체 대상 계좌가 필요합니다' });
     else if (v.toAccountId === v.accountId)
@@ -107,6 +124,7 @@ export const TransactionQuerySchema = z.object({
   to: z.string().datetime({ offset: true }).optional(),
   categoryId: z.string().optional(),
   accountId: z.string().optional(),
+  tagId: z.string().optional(),
   type: TxTypeEnum.optional(),
   q: z.string().max(50).optional(),
   cursor: z.string().optional(),

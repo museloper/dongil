@@ -1,9 +1,23 @@
 import { useNavigate } from 'react-router';
-import { formatSigned, type TransactionDto } from '@dongil/shared';
+import { formatSigned, toLocalDateKey, type TransactionDto } from '@dongil/shared';
 import { useCurrentBook } from '@/features/queries';
 import { formatTimeLabel, toTimeKey } from '@/lib/date';
 import { CategoryIcon } from './category-icon';
 import { AppText, Pressable } from './ui';
+
+/** 날짜별 묶음과 그날의 수입-지출 */
+export function groupByDay(items: TransactionDto[]) {
+  const map = new Map<string, TransactionDto[]>();
+  for (const tx of items) {
+    const key = toLocalDateKey(new Date(tx.occurredAt));
+    map.set(key, [...(map.get(key) ?? []), tx]);
+  }
+  return [...map.entries()].map(([day, data]) => ({
+    day,
+    data,
+    net: data.reduce((a, t) => a + (t.type === 'INCOME' ? t.amount : t.type === 'EXPENSE' ? -t.amount : 0), 0),
+  }));
+}
 
 export function TransactionRow({ tx }: { tx: TransactionDto }) {
   const navigate = useNavigate();
@@ -26,9 +40,19 @@ export function TransactionRow({ tx }: { tx: TransactionDto }) {
         color={isTransfer ? 'var(--textSub)' : (tx.category?.color ?? 'var(--textMuted)')}
       />
       <div className="tx-body">
-        <AppText lines={1}>{title}</AppText>
+        <div className="row" style={{ gap: 6, minWidth: 0 }}>
+          <AppText lines={1} style={{ minWidth: 0 }}>{title}</AppText>
+          {tx.importance ? (
+            <span className="importance-badge">
+              <AppText variant="caption" tone="primary">{tx.importance}</AppText>
+            </span>
+          ) : null}
+        </div>
         {sub ? (
           <AppText variant="caption" tone="textSub" lines={1}>{sub}</AppText>
+        ) : null}
+        {tx.tags.length ? (
+          <AppText variant="caption" tone="primary" lines={1}>{tx.tags.map((t) => `#${t.name}`).join(' ')}</AppText>
         ) : null}
       </div>
       <AppText variant="heading" tone={tx.type === 'INCOME' ? 'income' : isTransfer ? 'textSub' : 'text'} className="tabular nowrap">

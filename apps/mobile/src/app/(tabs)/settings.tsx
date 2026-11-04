@@ -80,6 +80,7 @@ export default function SettingsScreen() {
           }
         />
         <MenuRow icon="document-text-outline" label="가계부 메모" onPress={() => router.push('/notes')} />
+        <MenuRow icon="pricetag-outline" label="태그별 내역" onPress={() => router.push('/tags')} />
         <MenuRow icon="swap-horizontal-outline" label="가계부 전환 · 참여" onPress={() => router.push('/books')} />
       </Card>
 

@@ -70,6 +70,8 @@ export default function RootLayout() {
               <Stack.Screen name="books" options={{ presentation: 'modal' }} />
               <Stack.Screen name="book-settings" options={{ ...subHeader, title: '가계부 설정' }} />
               <Stack.Screen name="notes" options={{ ...subHeader, title: '가계부 메모' }} />
+              <Stack.Screen name="tags" options={{ ...subHeader, title: '태그별 내역' }} />
+              <Stack.Screen name="tag/[id]" options={{ ...subHeader, title: '태그 내역' }} />
             </Stack.Protected>
             <Stack.Protected guard={status !== 'authed'}>
               <Stack.Screen name="(auth)" />

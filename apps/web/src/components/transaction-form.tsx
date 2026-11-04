@@ -1,7 +1,18 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { formatWon, toLocalDateKey, TransactionCreateSchema, type TransactionDto, type TxType } from '@dongil/shared';
-import { useAccounts, useCategories, useCurrentBook, useDeleteTransaction, useSaveTransaction } from '@/features/queries';
+import {
+  formatWon,
+  IMPORTANCE_LEVELS,
+  TAG_MAX_LENGTH,
+  TAG_MAX_PER_TRANSACTION,
+  TagNameSchema,
+  toLocalDateKey,
+  TransactionCreateSchema,
+  type Importance,
+  type TransactionDto,
+  type TxType,
+} from '@dongil/shared';
+import { useAccounts, useCategories, useCurrentBook, useDeleteTransaction, useSaveTransaction, useTags } from '@/features/queries';
 import { formatDayLabel, formatTimeLabel, shiftDay, toTimeKey, withDateKey, withTimeKey } from '@/lib/date';
 import { useCloseModal } from '@/lib/nav';
 import { CategoryIcon, tint } from './category-icon';
@@ -17,6 +28,7 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const { book } = useCurrentBook();
   const categories = useCategories();
   const save = useSaveTransaction();
+  const usedTags = useTags();
   const remove = useDeleteTransaction();
 
   const [type, setType] = useState<TxType>(initial?.type ?? 'EXPENSE');
@@ -26,6 +38,9 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
   const [toAccountId, setToAccountId] = useState<string | null>(initial?.toAccount?.id ?? null);
   const [occurredAt, setOccurredAt] = useState(initial?.occurredAt ?? new Date().toISOString());
   const [memo, setMemo] = useState(initial?.memo ?? '');
+  const [importance, setImportance] = useState<Importance | null>(initial?.importance ?? null);
+  const [tags, setTags] = useState<string[]>(initial?.tags.map((t) => t.name) ?? []);
+  const [tagInput, setTagInput] = useState('');
   const [keypadOpen, setKeypadOpen] = useState(!initial);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +49,7 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
     (a, b) => Number(b.id === book?.defaultAccountId) - Number(a.id === book?.defaultAccountId),
   );
   const cats = (categories.data ?? []).filter((c) => c.type === type);
+  const suggestions = (usedTags.data ?? []).filter((t) => !tags.includes(t.name));
   const fromId = accountId ?? accountList[0]?.id ?? null;
   const dateKey = toLocalDateKey(new Date(occurredAt));
   const timeKey = toTimeKey(occurredAt);
@@ -42,6 +58,16 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
     setType(t);
     // 수입/지출이 바뀌면 카테고리 종류가 달라지므로 초기화
     if (t !== type) setCategoryId(null);
+  };
+
+  const addTag = (raw: string) => {
+    const parsed = TagNameSchema.safeParse(raw);
+    if (!parsed.success) return setError(parsed.error.issues[0].message);
+    if (tags.length >= TAG_MAX_PER_TRANSACTION && !tags.includes(parsed.data)) return setError(`태그는 ${TAG_MAX_PER_TRANSACTION}개까지 달 수 있습니다`);
+    setError(null);
+    if (!tags.includes(parsed.data)) setTags([...tags, parsed.data]);
+    // 추천 태그를 눌렀을 때는 입력 중인 내용을 지우지 않는다
+    if (raw === tagInput) setTagInput('');
   };
 
   const submit = () => {
@@ -53,6 +79,9 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
       categoryId: type === 'TRANSFER' ? null : categoryId,
       memo: memo.trim() || null,
       occurredAt,
+      importance: type === 'EXPENSE' ? importance : null,
+      // 입력해 두고 추가를 누르지 않은 태그도 함께 저장한다
+      tags: type === 'EXPENSE' ? (tagInput.trim() ? [...tags, tagInput] : tags) : [],
     };
     if (!amount) return setError('금액을 입력하세요');
     const parsed = TransactionCreateSchema.safeParse(body);
@@ -197,6 +226,54 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
                 onKeyDown={(e) => e.key === 'Enter' && submit()}
               />
             </Field>
+
+            {type === 'EXPENSE' && (
+              <>
+                <Field label="중요도">
+                  <div className="row" style={{ gap: 8 }}>
+                    {IMPORTANCE_LEVELS.map((level) => (
+                      <Chip key={level} label={level} active={importance === level} onClick={() => setImportance(importance === level ? null : level)} />
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label="태그">
+                  {tags.length > 0 && (
+                    <div className="tag-wrap">
+                      {tags.map((name) => (
+                        <Chip key={name} label={`#${name} ×`} active onClick={() => setTags(tags.filter((t) => t !== name))} />
+                      ))}
+                    </div>
+                  )}
+                  <div className="row" style={{ gap: 8 }}>
+                    <input
+                      className="input"
+                      style={{ flex: 1, minWidth: 0 }}
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="여행, 명절처럼 묶어 볼 이름"
+                      maxLength={TAG_MAX_LENGTH + 1}
+                      aria-label="태그 입력"
+                      enterKeyHint="done"
+                      onKeyDown={(e) => {
+                        // 한글 조합을 끝내는 Enter 는 태그 추가로 치지 않는다
+                        if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                        e.preventDefault();
+                        if (tagInput.trim()) addTag(tagInput);
+                      }}
+                    />
+                    <Chip label="추가" active={false} onClick={() => addTag(tagInput)} />
+                  </div>
+                  {suggestions.length > 0 && (
+                    <div className="hscroll">
+                      {suggestions.map((t) => (
+                        <Chip key={t.id} label={`#${t.name}`} active={false} onClick={() => addTag(t.name)} />
+                      ))}
+                    </div>
+                  )}
+                </Field>
+              </>
+            )}
           </div>
 
           <footer className="modal-footer">

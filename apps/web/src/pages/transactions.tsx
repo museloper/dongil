@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { compactWon, formatWon, toLocalDateKey, type TransactionDto, type TxType } from '@dongil/shared';
+import { compactWon, formatWon, toLocalDateKey, type TxType } from '@dongil/shared';
 import { Icon } from '@/components/icon';
 import { MonthSwitcher } from '@/components/month-switcher';
 import { Fab, Screen } from '@/components/screen';
-import { TransactionRow } from '@/components/transaction-row';
+import { groupByDay, TransactionRow } from '@/components/transaction-row';
 import { AppText, Card, Chip, EmptyState, ErrorState, Loading, Segmented, haptic } from '@/components/ui';
 import { monthFilter, useCalendar, useTransactions, type TxFilter } from '@/features/queries';
 import { dayOfWeek, dayRangeIso, daysInMonth, formatDayLabel } from '@/lib/date';
@@ -38,19 +38,6 @@ export default function TransactionsPage() {
 }
 
 // ---------------- 리스트 ----------------
-
-function groupByDay(items: TransactionDto[]) {
-  const map = new Map<string, TransactionDto[]>();
-  for (const tx of items) {
-    const key = toLocalDateKey(new Date(tx.occurredAt));
-    map.set(key, [...(map.get(key) ?? []), tx]);
-  }
-  return [...map.entries()].map(([day, data]) => ({
-    day,
-    data,
-    net: data.reduce((a, t) => a + (t.type === 'INCOME' ? t.amount : t.type === 'EXPENSE' ? -t.amount : 0), 0),
-  }));
-}
 
 /** 입력이 멈춘 뒤에만 검색하도록 */
 function useDebounced<T>(value: T, ms = 300) {
@@ -90,7 +77,7 @@ function ListView() {
     <>
       <div className="search">
         <Icon name="search" size={18} color="var(--textMuted)" />
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="메모, 카테고리 검색" aria-label="검색" enterKeyHint="search" />
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="메모, 카테고리, 태그 검색" aria-label="검색" enterKeyHint="search" />
         {q ? (
           <button type="button" className="plain" onClick={() => setQ('')} aria-label="검색어 지우기">
             <Icon name="close-circle" size={18} color="var(--textMuted)" />

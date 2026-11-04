@@ -11,6 +11,7 @@ import { BudgetsModule } from './modules/budgets/budgets.module';
 import { StatsModule } from './modules/stats/stats.module';
 import { ExportModule } from './modules/export/export.module';
 import { NotesModule } from './modules/notes/notes.module';
+import { TagsModule } from './modules/tags/tags.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NotesModule } from './modules/notes/notes.module';
     StatsModule,
     ExportModule,
     NotesModule,
+    TagsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }],
 })

@@ -14,6 +14,7 @@ import {
   type NoteDto,
   type Paginated,
   type SummaryDto,
+  type TagDto,
   type TransactionCreate,
   type TransactionDto,
   type TrendPointDto,
@@ -28,6 +29,7 @@ export interface TxFilter {
   type?: TxType;
   categoryId?: string;
   accountId?: string;
+  tagId?: string;
   q?: string;
 }
 
@@ -41,7 +43,7 @@ export const bookPath = (bookId: string, path: string) => `/books/${bookId}${pat
 
 /** 돈이 움직이면 영향을 받는 모든 캐시 무효화 (모든 가계부) */
 function invalidateMoney(qc: QueryClient) {
-  for (const key of ['transactions', 'stats', 'budget', 'accounts']) qc.invalidateQueries({ queryKey: [key] });
+  for (const key of ['transactions', 'stats', 'budget', 'accounts', 'tags']) qc.invalidateQueries({ queryKey: [key] });
 }
 
 // ---------- 가계부 ----------
@@ -145,6 +147,15 @@ export function useTransactions(filter: TxFilter, pageSize = 30, enabled = true)
         query: { ...filter, cursor: pageParam, limit: pageSize },
       }),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+}
+
+export function useTags() {
+  const bookId = useBookId();
+  return useQuery({
+    queryKey: ['tags', bookId],
+    queryFn: () => api<TagDto[]>(bookPath(bookId!, '/tags')),
+    enabled: !!bookId,
   });
 }
 

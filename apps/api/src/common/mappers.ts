@@ -23,6 +23,7 @@ type TxWithRelations = Transaction & {
   account: Account;
   toAccount: Account | null;
   category: Category | null;
+  tags: { id: string; name: string }[];
   createdBy: { id: string; nickname: string };
 };
 
@@ -30,6 +31,7 @@ export const txInclude = {
   account: true,
   toAccount: true,
   category: true,
+  tags: { select: { id: true, name: true }, orderBy: { name: 'asc' } },
   createdBy: { select: { id: true, nickname: true } },
 } as const;
 
@@ -44,6 +46,8 @@ export const toTransactionDto = (t: TxWithRelations): TransactionDto => ({
   category: t.category
     ? { id: t.category.id, name: t.category.name, icon: t.category.icon, color: t.category.color }
     : null,
+  importance: t.importance,
+  tags: t.tags,
   author: { id: t.createdBy.id, nickname: t.createdBy.nickname },
 });
 

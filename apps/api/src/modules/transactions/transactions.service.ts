@@ -16,6 +16,7 @@ export class TransactionsService {
       bookId,
       type: q.type,
       categoryId: q.categoryId,
+      ...(q.tagId && { tags: { some: { id: q.tagId } } }),
       occurredAt: { gte: q.from ? new Date(q.from) : undefined, lt: q.to ? new Date(q.to) : undefined },
       ...(q.accountId && { OR: [{ accountId: q.accountId }, { toAccountId: q.accountId }] }),
       ...(q.q && {
@@ -24,6 +25,7 @@ export class TransactionsService {
             OR: [
               { memo: { contains: q.q, mode: 'insensitive' } },
               { category: { name: { contains: q.q, mode: 'insensitive' } } },
+              { tags: { some: { name: { contains: q.q, mode: 'insensitive' } } } },
             ],
           },
         ],
@@ -53,7 +55,10 @@ export class TransactionsService {
   async create(bookId: string, authorId: string, input: TransactionCreate): Promise<TransactionDto> {
     return this.prisma.$transaction(async (tx) => {
       const data = await this.normalize(tx, bookId, input);
-      const row = await tx.transaction.create({ data: { ...data, bookId, createdById: authorId } });
+      const names = this.tagNames(input);
+      const row = await tx.transaction.create({
+        data: { ...data, bookId, createdById: authorId, ...(names && { tags: { connectOrCreate: this.connectTags(bookId, names) } }) },
+      });
       await this.applyDeltas(tx, balanceDeltas(data));
       return toTransactionDto(await this.reload(tx, row.id));
     });
@@ -64,7 +69,11 @@ export class TransactionsService {
       const prev = await tx.transaction.findFirst({ where: { id, bookId } });
       if (!prev) throw new NotFoundException('거래를 찾을 수 없습니다');
       const data = await this.normalize(tx, bookId, input);
-      await tx.transaction.update({ where: { id }, data });
+      const names = this.tagNames(input);
+      await tx.transaction.update({
+        where: { id },
+        data: { ...data, ...(names && { tags: { set: [], connectOrCreate: this.connectTags(bookId, names) } }) },
+      });
       await this.applyDeltas(tx, mergeDeltas(balanceDeltas(prev, -1), balanceDeltas(data)));
       return toTransactionDto(await this.reload(tx, id));
     });
@@ -101,7 +110,19 @@ export class TransactionsService {
       categoryId,
       memo: input.memo?.trim() || null,
       occurredAt: new Date(input.occurredAt),
+      // undefined 면 수정할 때 기존 값을 유지한다. 지출이 아니게 되면 지운다
+      importance: input.type === 'EXPENSE' ? input.importance : null,
     };
+  }
+
+  /** undefined 면 태그를 건드리지 않는다. 지출이 아니게 되면 모두 뗀다 */
+  private tagNames(input: TransactionCreate) {
+    if (input.type !== 'EXPENSE') return [];
+    return input.tags && [...new Set(input.tags)];
+  }
+
+  private connectTags(bookId: string, names: string[]) {
+    return names.map((name) => ({ where: { bookId_name: { bookId, name } }, create: { bookId, name } }));
   }
 
   private async applyDeltas(tx: Tx, deltas: Map<string, bigint>) {
