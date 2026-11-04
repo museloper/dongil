@@ -12,6 +12,7 @@ export const DEFAULT_CATEGORIES: { name: string; type: CategoryType; icon: strin
   { name: '통신', type: 'EXPENSE', icon: 'phone-portrait', color: '#22B8CF' },
   { name: '문화', type: 'EXPENSE', icon: 'film', color: '#9775FA' },
   { name: '교육', type: 'EXPENSE', icon: 'school', color: '#5C7CFA' },
+  { name: '육아', type: 'EXPENSE', icon: 'happy', color: '#FCC419' },
   { name: '의료', type: 'EXPENSE', icon: 'medkit', color: '#FF922B' },
   { name: '보험', type: 'EXPENSE', icon: 'heart', color: '#F06595' },
   { name: '경조사', type: 'EXPENSE', icon: 'gift', color: '#E64980' },

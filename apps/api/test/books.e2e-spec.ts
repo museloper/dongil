@@ -55,6 +55,8 @@ describe('공유 가계부 (e2e)', () => {
 
     const cats: CategoryDto[] = (await as('a', api().get(bookPath(shared.id, '/categories')))).body;
     expect(cats.length).toBeGreaterThan(5);
+    const names = cats.map((c) => c.name);
+    expect(names.indexOf('육아')).toBe(names.indexOf('교육') + 1);
     const accs: AccountDto[] = (await as('a', api().get(bookPath(shared.id, '/accounts')))).body;
     expect(accs.map((a) => a.name)).toEqual(['현금']);
   });
