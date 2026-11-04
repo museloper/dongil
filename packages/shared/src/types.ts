@@ -120,6 +120,20 @@ export interface CategoryStatDto {
   amount: number;
   ratio: number;
 }
+export interface ImportanceStatDto {
+  /** null 은 중요도를 달지 않은 지출 */
+  importance: Importance | null;
+  amount: number;
+  ratio: number;
+}
+export interface TagStatDto {
+  tagId: string;
+  name: string;
+  amount: number;
+  count: number;
+  /** 조건에 맞는 총 지출 대비. 태그가 여러 개인 지출은 태그마다 더해져 합이 1을 넘을 수 있다 */
+  ratio: number;
+}
 export interface TrendPointDto {
   month: string;
   income: number;

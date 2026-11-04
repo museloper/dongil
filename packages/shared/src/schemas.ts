@@ -140,6 +140,13 @@ export const TrendQuerySchema = z.object({
 /** 통계 조회. accountId 를 주면 그 계좌(통장)만, 없으면 가계부 전체 */
 export const StatsQuerySchema = MonthQuerySchema.extend({ accountId: z.string().optional() });
 export const StatsTrendQuerySchema = TrendQuerySchema.extend({ accountId: z.string().optional() });
+/** 지출 통계를 겹쳐 보는 조건. importance 의 NONE 은 중요도를 달지 않은 지출 */
+export const StatsBreakdownQuerySchema = StatsQuerySchema.extend({
+  importance: z.enum([...IMPORTANCE_LEVELS, 'NONE']).optional(),
+  categoryId: z.string().optional(),
+  tagId: z.string().optional(),
+});
+export type StatsBreakdownQuery = z.infer<typeof StatsBreakdownQuerySchema>;
 export const ExportQuerySchema = z.object({
   from: z.string().datetime({ offset: true }),
   to: z.string().datetime({ offset: true }),

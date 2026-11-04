@@ -919,3 +919,15 @@ button.plain {
   padding: 14px 4px;
   text-align: left;
 }
+
+.stat-row {
+  width: calc(100% + 12px);
+  margin: -6px;
+  padding: 6px;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.stat-row-active {
+  background: var(--primarySoft);
+}

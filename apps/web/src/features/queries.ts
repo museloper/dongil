@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   monthRange,
   type AccountDto,
@@ -10,11 +10,14 @@ import {
   type CategoryDto,
   type CategoryStatDto,
   type CategoryType,
+  type ImportanceStatDto,
   type InviteDto,
   type NoteDto,
   type Paginated,
+  type StatsBreakdownQuery,
   type SummaryDto,
   type TagDto,
+  type TagStatDto,
   type TransactionCreate,
   type TransactionDto,
   type TrendPointDto,
@@ -168,19 +171,28 @@ export function useTransaction(id: string | undefined) {
   });
 }
 
-function useStat<T>(name: string, query: Record<string, string | number | undefined>) {
+/** 통계를 겹쳐 보는 조건 */
+export type StatFilter = Pick<StatsBreakdownQuery, 'importance' | 'categoryId' | 'tagId'>;
+
+function useStat<T>(name: string, query: Record<string, string | number | undefined>, keepPrevious = false) {
   const bookId = useBookId();
   return useQuery({
     queryKey: ['stats', bookId, name, query],
     queryFn: () => api<T>(bookPath(bookId!, `/stats/${name}`), { query }),
     enabled: !!bookId,
+    // 조건을 바꿀 때 카드가 비었다 채워지며 화면이 튀지 않게 한다
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
   });
 }
 
 /** accountId 를 주면 그 계좌(통장)만, 없으면 가계부 전체 통계 */
 export const useSummary = (month: string, accountId?: string) => useStat<SummaryDto>('summary', { month, accountId });
-export const useByCategory = (month: string, accountId?: string) =>
-  useStat<CategoryStatDto[]>('by-category', { month, accountId });
+export const useByCategory = (month: string, accountId?: string, filter: StatFilter = {}) =>
+  useStat<CategoryStatDto[]>('by-category', { month, accountId, ...filter }, true);
+export const useByImportance = (month: string, accountId?: string, filter: StatFilter = {}) =>
+  useStat<ImportanceStatDto[]>('by-importance', { month, accountId, ...filter }, true);
+export const useByTag = (month: string, accountId?: string, filter: StatFilter = {}) =>
+  useStat<TagStatDto[]>('by-tag', { month, accountId, ...filter }, true);
 export const useTrend = (month: string, months = 6, accountId?: string) =>
   useStat<TrendPointDto[]>('trend', { month, months, accountId });
 export const useCalendar = (month: string) => useStat<CalendarDayDto[]>('calendar', { month });

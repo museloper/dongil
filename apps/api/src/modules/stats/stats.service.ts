@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  IMPORTANCE_LEVELS,
   monthRange,
   shiftMonth,
   type CalendarDayDto,
   type CategoryStatDto,
+  type ImportanceStatDto,
+  type StatsBreakdownQuery,
   type SummaryDto,
+  type TagStatDto,
   type TrendPointDto,
 } from '@dongil/shared';
 import { PrismaService } from '../../common/prisma.module';
@@ -63,18 +67,70 @@ export class StatsService {
   }
 
   /** 카테고리별 지출 합계 (month 범위). 예산 계산에서도 재사용 */
-  async expenseByCategory(bookId: string, start: Date, end: Date, accountId?: string): Promise<Map<string, number>> {
+  async expenseByCategory(
+    bookId: string,
+    start: Date,
+    end: Date,
+    accountId?: string,
+    filter: Prisma.TransactionWhereInput = {},
+  ): Promise<Map<string, number>> {
     const rows = await this.prisma.transaction.groupBy({
       by: ['categoryId'],
-      where: { bookId, accountId, type: 'EXPENSE', occurredAt: { gte: start, lt: end } },
+      where: { ...filter, bookId, accountId, type: 'EXPENSE', occurredAt: { gte: start, lt: end } },
       _sum: { amount: true },
     });
     return new Map(rows.filter((r) => r.categoryId).map((r) => [r.categoryId!, Number(r._sum.amount ?? 0n)]));
   }
 
-  async byCategory(bookId: string, month: string, accountId?: string): Promise<CategoryStatDto[]> {
-    const { start, end } = monthRange(month);
-    const sums = await this.expenseByCategory(bookId, start, end, accountId);
+  /** 겹쳐 보는 조건. 값이 없는 조건은 undefined 라 Prisma 가 무시한다 */
+  private breakdownFilter(q: StatsBreakdownQuery): Prisma.TransactionWhereInput {
+    return {
+      categoryId: q.categoryId,
+      importance: q.importance === 'NONE' ? null : q.importance,
+      ...(q.tagId && { tags: { some: { id: q.tagId } } }),
+    };
+  }
+
+  private breakdownWhere(bookId: string, q: StatsBreakdownQuery): Prisma.TransactionWhereInput {
+    const { start, end } = monthRange(q.month);
+    return { ...this.breakdownFilter(q), bookId, accountId: q.accountId, type: 'EXPENSE', occurredAt: { gte: start, lt: end } };
+  }
+
+  /** A, B, C, 미지정 순서로 언제나 네 줄을 준다 */
+  async byImportance(bookId: string, q: StatsBreakdownQuery): Promise<ImportanceStatDto[]> {
+    const rows = await this.prisma.transaction.groupBy({
+      by: ['importance'],
+      where: this.breakdownWhere(bookId, q),
+      _sum: { amount: true },
+    });
+    const total = rows.reduce((sum, r) => sum + Number(r._sum.amount ?? 0n), 0);
+    return [...IMPORTANCE_LEVELS, null].map((importance) => {
+      const amount = Number(rows.find((r) => r.importance === importance)?._sum.amount ?? 0n);
+      return { importance, amount, ratio: total ? amount / total : 0 };
+    });
+  }
+
+  async byTag(bookId: string, q: StatsBreakdownQuery): Promise<TagStatDto[]> {
+    const where = this.breakdownWhere(bookId, q);
+    const [tags, all] = await Promise.all([
+      this.prisma.tag.findMany({
+        where: { bookId, transactions: { some: where } },
+        include: { transactions: { where, select: { amount: true } } },
+      }),
+      this.prisma.transaction.aggregate({ where, _sum: { amount: true } }),
+    ]);
+    const total = Number(all._sum.amount ?? 0n);
+    return tags
+      .map((t) => {
+        const amount = Number(t.transactions.reduce((sum, tx) => sum + tx.amount, 0n));
+        return { tagId: t.id, name: t.name, amount, count: t.transactions.length, ratio: total ? amount / total : 0 };
+      })
+      .sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name, 'ko'));
+  }
+
+  async byCategory(bookId: string, q: StatsBreakdownQuery): Promise<CategoryStatDto[]> {
+    const { start, end } = monthRange(q.month);
+    const sums = await this.expenseByCategory(bookId, start, end, q.accountId, this.breakdownFilter(q));
     if (sums.size === 0) return [];
     const cats = await this.prisma.category.findMany({ where: { id: { in: [...sums.keys()] } } });
     const total = [...sums.values()].reduce((a, b) => a + b, 0);

@@ -1,16 +1,26 @@
-import { formatWon, type SummaryDto } from '@dongil/shared';
+import { formatWon, type Importance, type SummaryDto } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { DonutChart, TrendBars } from '@/components/charts';
 import { CountUp } from '@/components/money';
 import { MonthSwitcher } from '@/components/month-switcher';
 import { Screen } from '@/components/screen';
 import { useState } from 'react';
-import { AppText, Card, Chip, EmptyState, ErrorState, ProgressBar, SectionTitle } from '@/components/ui';
-import { useAccounts, useByCategory, useSummary, useTrend } from '@/features/queries';
+import { AppText, Card, Chip, EmptyState, ErrorState, Pressable, ProgressBar, SectionTitle } from '@/components/ui';
+import { useAccounts, useByCategory, useByImportance, useByTag, useCurrentBook, useSummary, useTrend, type StatFilter } from '@/features/queries';
 import { useMonth } from '@/lib/ui-store';
 import type { ColorToken } from '@/theme/tokens';
 
+type Picked = { id: string; name: string };
+
+const importanceLabel = (level: Importance | null) => level ?? '미지정';
+
 export default function StatsPage() {
+  const { book } = useCurrentBook();
+  // 가계부를 바꾸면 그 가계부에 없는 계좌·카테고리·태그 조건을 함께 비운다
+  return <Stats key={book?.id} />;
+}
+
+function Stats() {
   const month = useMonth((s) => s.month);
   const accounts = useAccounts().data ?? [];
   const [picked, setPicked] = useState<string>();
@@ -18,16 +28,33 @@ export default function StatsPage() {
   const account = accounts.find((a) => a.id === picked);
   const accountId = account?.id;
   const summary = useSummary(month, accountId);
-  const byCat = useByCategory(month, accountId);
+  const [importance, setImportance] = useState<StatFilter['importance']>();
+  const [category, setCategory] = useState<Picked>();
+  const [tag, setTag] = useState<Picked>();
+  const categoryId = category?.id;
+  const tagId = tag?.id;
+  // 카드마다 자기 조건을 뺀 나머지 조건으로 계산해, 고른 뒤에도 다른 항목을 비교하고 바꿀 수 있게 한다
+  const byCat = useByCategory(month, accountId, { importance, tagId });
+  const byImportance = useByImportance(month, accountId, { categoryId, tagId });
+  const byTag = useByTag(month, accountId, { importance, categoryId });
   const trend = useTrend(month, 6, accountId);
 
   const refresh = () => {
     summary.refetch();
     byCat.refetch();
+    byImportance.refetch();
+    byTag.refetch();
     trend.refetch();
   };
   const cats = byCat.data ?? [];
-  const expense = summary.data?.expense ?? 0;
+  const importanceRows = byImportance.data ?? [];
+  const tags = byTag.data ?? [];
+  const catTotal = cats.reduce((sum, c) => sum + c.amount, 0);
+  const hasFilter = !!(importance || category || tag);
+  const filteredTotal = importance
+    ? (importanceRows.find((row) => (row.importance ?? 'NONE') === importance)?.amount ?? 0)
+    : importanceRows.reduce((sum, row) => sum + row.amount, 0);
+  const error = byCat.error ?? byImportance.error ?? byTag.error;
 
   return (
     <Screen title="통계" right={<MonthSwitcher />}>
@@ -39,21 +66,42 @@ export default function StatsPage() {
           ))}
         </div>
       )}
-      {byCat.error ? (
-        <ErrorState error={byCat.error} onRetry={refresh} />
+      {error ? (
+        <ErrorState error={error} onRetry={refresh} />
       ) : (
         <>
+          {hasFilter ? (
+            <Card className="fade-in" style={{ display: 'grid', gap: 12 }}>
+              <div className="row between" style={{ gap: 8 }}>
+                <AppText variant="label" tone="textSub">선택한 조건의 지출</AppText>
+                <AppText variant="heading" className="tabular nowrap">{formatWon(filteredTotal)}</AppText>
+              </div>
+              <div className="tag-wrap">
+                {importance && <Chip label={`${importance === 'NONE' ? '미지정' : importance} ×`} active onClick={() => setImportance(undefined)} />}
+                {category && <Chip label={`${category.name} ×`} active onClick={() => setCategory(undefined)} />}
+                {tag && <Chip label={`#${tag.name} ×`} active onClick={() => setTag(undefined)} />}
+              </div>
+            </Card>
+          ) : (
+            <AppText variant="caption" tone="textMuted">항목을 누르면 중요도·카테고리·태그를 겹쳐서 볼 수 있어요</AppText>
+          )}
+
           <Card className="fade-in-up" style={{ display: 'grid', justifyItems: 'center', gap: 20 }}>
             <AppText variant="heading" style={{ justifySelf: 'stretch' }}>카테고리별 지출</AppText>
             {cats.length ? (
               <>
                 <DonutChart data={cats.map((c) => ({ key: c.categoryId, value: c.amount, color: c.color }))}>
-                  <AppText variant="caption" tone="textSub">총 지출</AppText>
-                  <CountUp value={expense} variant="heading" />
+                  <AppText variant="caption" tone="textSub">{importance || tag ? '조건의 지출' : '총 지출'}</AppText>
+                  <CountUp value={catTotal} variant="heading" />
                 </DonutChart>
                 <div style={{ justifySelf: 'stretch', display: 'grid', gap: 14 }}>
                   {cats.map((c, i) => (
-                    <div key={c.categoryId} className="row fade-in-up" style={{ gap: 12, animationDelay: `${120 + i * 40}ms` }}>
+                    <Pressable
+                      key={c.categoryId}
+                      className={`stat-row row fade-in-up${c.categoryId === categoryId ? ' stat-row-active' : ''}`}
+                      aria-pressed={c.categoryId === categoryId}
+                      style={{ gap: 12, animationDelay: `${120 + i * 40}ms` }}
+                      onClick={() => setCategory(c.categoryId === categoryId ? undefined : { id: c.categoryId, name: c.name })}>
                       <CategoryIcon icon={c.icon} color={c.color} size={36} />
                       <div style={{ flex: 1, display: 'grid', gap: 6, minWidth: 0 }}>
                         <div className="row between" style={{ gap: 8 }}>
@@ -65,12 +113,73 @@ export default function StatsPage() {
                         </div>
                         <ProgressBar ratio={c.ratio} height={6} color={c.color} />
                       </div>
-                    </div>
+                    </Pressable>
                   ))}
                 </div>
               </>
             ) : (
               !byCat.isLoading && <EmptyState icon="pie-chart-outline" title="지출 기록이 없어요" />
+            )}
+          </Card>
+
+          <Card className="fade-in-up" style={{ animationDelay: '40ms', display: 'grid', gap: 14 }}>
+            <AppText variant="heading">중요도별 지출</AppText>
+            {importanceRows.map((row) => {
+              const value = row.importance ?? 'NONE';
+              const active = importance === value;
+              return (
+                <Pressable
+                  key={value}
+                  className={`stat-row row${active ? ' stat-row-active' : ''}`}
+                  aria-pressed={active}
+                  style={{ gap: 12 }}
+                  onClick={() => setImportance(active ? undefined : value)}>
+                  <span className="circle-icon" style={{ width: 36, height: 36, backgroundColor: row.importance ? 'var(--primarySoft)' : 'var(--fill)' }}>
+                    <AppText variant="label" tone={row.importance ? 'primary' : 'textSub'}>{row.importance ?? '-'}</AppText>
+                  </span>
+                  <div style={{ flex: 1, display: 'grid', gap: 6, minWidth: 0 }}>
+                    <div className="row between" style={{ gap: 8 }}>
+                      <AppText lines={1}>
+                        {importanceLabel(row.importance)}{' '}
+                        <AppText variant="label" tone="textMuted">{Math.round(row.ratio * 100)}%</AppText>
+                      </AppText>
+                      <AppText variant="heading" className="tabular nowrap">{formatWon(row.amount)}</AppText>
+                    </div>
+                    <ProgressBar ratio={row.ratio} height={6} color={row.importance ? 'var(--primary)' : 'var(--textMuted)'} />
+                  </div>
+                </Pressable>
+              );
+            })}
+          </Card>
+
+          <Card className="fade-in-up" style={{ animationDelay: '60ms', display: 'grid', gap: 14 }}>
+            <AppText variant="heading">태그별 지출</AppText>
+            {tags.length ? (
+              <>
+                {tags.map((t) => {
+                  const active = t.tagId === tagId;
+                  return (
+                    <Pressable
+                      key={t.tagId}
+                      className={`stat-row${active ? ' stat-row-active' : ''}`}
+                      aria-pressed={active}
+                      style={{ display: 'grid', gap: 6 }}
+                      onClick={() => setTag(active ? undefined : { id: t.tagId, name: t.name })}>
+                      <div className="row between" style={{ gap: 8 }}>
+                        <AppText lines={1} style={{ minWidth: 0 }}>
+                          #{t.name}{' '}
+                          <AppText variant="label" tone="textMuted">{t.count}건 · {Math.round(t.ratio * 100)}%</AppText>
+                        </AppText>
+                        <AppText variant="heading" className="tabular nowrap">{formatWon(t.amount)}</AppText>
+                      </div>
+                      <ProgressBar ratio={t.ratio} height={6} color="var(--primary)" />
+                    </Pressable>
+                  );
+                })}
+                <AppText variant="caption" tone="textMuted">태그가 여러 개인 지출은 태그마다 더해서, 합계가 총 지출보다 클 수 있어요</AppText>
+              </>
+            ) : (
+              <AppText tone="textSub">{hasFilter ? '이 조건에 태그가 달린 지출이 없어요' : '지출에 태그를 달면 여기에 모여요'}</AppText>
             )}
           </Card>
 

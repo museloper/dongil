@@ -1,6 +1,6 @@
 import { Controller, Get, Module, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { StatsQuerySchema, StatsTrendQuerySchema } from '@dongil/shared';
+import { StatsBreakdownQuerySchema, StatsQuerySchema, StatsTrendQuerySchema, type StatsBreakdownQuery } from '@dongil/shared';
 import { z } from 'zod';
 import { BookAccessGuard, BookId } from '../../common/book-access.guard';
 import { ZodPipe } from '../../common/zod.pipe';
@@ -21,8 +21,18 @@ export class StatsController {
   }
 
   @Get('by-category')
-  byCategory(@BookId() bookId: string, @Query(new ZodPipe(StatsQuerySchema)) q: StatsQ) {
-    return this.svc.byCategory(bookId, q.month, q.accountId);
+  byCategory(@BookId() bookId: string, @Query(new ZodPipe(StatsBreakdownQuerySchema)) q: StatsBreakdownQuery) {
+    return this.svc.byCategory(bookId, q);
+  }
+
+  @Get('by-importance')
+  byImportance(@BookId() bookId: string, @Query(new ZodPipe(StatsBreakdownQuerySchema)) q: StatsBreakdownQuery) {
+    return this.svc.byImportance(bookId, q);
+  }
+
+  @Get('by-tag')
+  byTag(@BookId() bookId: string, @Query(new ZodPipe(StatsBreakdownQuerySchema)) q: StatsBreakdownQuery) {
+    return this.svc.byTag(bookId, q);
   }
 
   @Get('trend')
