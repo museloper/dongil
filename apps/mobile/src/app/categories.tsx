@@ -1,9 +1,8 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import type { CategoryDto, CategoryType } from '@dongil/shared';
-import { CategoryIcon, ICON_CHOICES } from '@/components/category-icon';
+import { CategoryGlyph, CategoryIcon, ICON_CHOICES } from '@/components/category-icon';
 import { AppText, Button, Card, ErrorState, IconButton, Input, Loading, PressableScale, Segmented, haptic } from '@/components/ui';
 import { useCategories, useDeleteCategory, useSaveCategory, type CategoryInput } from '@/features/queries';
 import { useTheme } from '@/theme/theme';
@@ -121,7 +120,7 @@ function CategoryEditor({ type, category, onDone }: { type: CategoryType; catego
                 onPress={() => setForm((f) => ({ ...f, icon }))}
                 style={[styles.iconCell, { backgroundColor: active ? `${form.color}26` : colors.fill }]}
                 scaleTo={0.85}>
-                <Ionicons name={icon} size={20} color={active ? form.color : colors.textSub} />
+                <CategoryGlyph icon={icon} size={20} color={active ? form.color : colors.textSub} />
               </PressableScale>
             );
           })}

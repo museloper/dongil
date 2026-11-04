@@ -1,6 +1,6 @@
 import type { CategoryType } from '@prisma/client';
 
-/** 가입 시 자동 생성되는 기본 카테고리. icon 은 앱의 Ionicons 이름. */
+/** 가입 시 자동 생성되는 기본 카테고리. icon 은 앱의 Ionicons 이름 또는 shared 의 CUSTOM_ICONS 이름. */
 export const DEFAULT_CATEGORIES: { name: string; type: CategoryType; icon: string; color: string }[] = [
   { name: '식비', type: 'EXPENSE', icon: 'restaurant', color: '#FF6B6B' },
   { name: '카페', type: 'EXPENSE', icon: 'cafe', color: '#C08457' },
@@ -12,10 +12,11 @@ export const DEFAULT_CATEGORIES: { name: string; type: CategoryType; icon: strin
   { name: '통신', type: 'EXPENSE', icon: 'phone-portrait', color: '#22B8CF' },
   { name: '문화', type: 'EXPENSE', icon: 'film', color: '#9775FA' },
   { name: '교육', type: 'EXPENSE', icon: 'school', color: '#5C7CFA' },
-  { name: '육아', type: 'EXPENSE', icon: 'happy', color: '#FCC419' },
+  { name: '육아', type: 'EXPENSE', icon: 'baby-crawl', color: '#FCC419' },
   { name: '의료', type: 'EXPENSE', icon: 'medkit', color: '#FF922B' },
   { name: '보험', type: 'EXPENSE', icon: 'heart', color: '#F06595' },
   { name: '경조사', type: 'EXPENSE', icon: 'gift', color: '#E64980' },
+  { name: '모임통장', type: 'EXPENSE', icon: 'people', color: '#4C6EF5' },
   { name: '구독', type: 'EXPENSE', icon: 'repeat', color: '#748FFC' },
   // 저축·투자도 이번 달에 쓸 수 있는 돈에서 빠져나가므로 지출로 기록한다
   { name: '저금', type: 'EXPENSE', icon: 'cash', color: '#38D9A9' },

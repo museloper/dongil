@@ -1,5 +1,16 @@
 import type { CSSProperties } from 'react';
+import { CUSTOM_ICONS } from '@dongil/shared';
 import * as io from 'ionicons/icons';
+
+/** shared 의 직접 그린 아이콘을 Ionicons 와 같은 data URL 로 만든다 */
+function customIcon(name: string) {
+  const parts = CUSTOM_ICONS[name].map((p) =>
+    p.w
+      ? `<path d='${p.d}' fill='none' stroke='black' stroke-width='${p.w}' stroke-linecap='round' stroke-linejoin='round'/>`
+      : `<path d='${p.d}' fill='black'/>`,
+  );
+  return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>${parts.join('')}</svg>`;
+}
 
 /**
  * 이름("restaurant", "chevron-back" …)으로 고르는 Ionicons.
@@ -99,6 +110,7 @@ const ICONS = {
   'ellipsis-horizontal': io.ellipsisHorizontal,
   'ellipsis-vertical': io.ellipsisVertical,
   happy: io.happy,
+  'baby-crawl': customIcon('baby-crawl'),
 } as const;
 
 export type IconName = keyof typeof ICONS;

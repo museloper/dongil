@@ -33,6 +33,7 @@ pnpm generate-icons    # public/logo.svg → PWA 아이콘 PNG 재생성
 - **아이콘은 `<Icon name="…" />`(`src/components/icon.tsx`).** 카테고리 아이콘은 서버에 Ionicons 이름 문자열로 저장되므로 모바일과 같은 이름 체계를 쓴다.
   - 번들 크기 때문에 쓰는 아이콘만 `ICONS` 에 등록한다. 없는 이름은 `help` 로 그려지니 새 아이콘(서버 기본 카테고리 포함)을 쓰면 꼭 추가한다.
   - 아웃라인 아이콘은 SVG 안에 넣은 스타일로 선을 그린다(마스크 이미지에는 바깥 CSS 가 닿지 않음).
+  - Ionicons 에 없는 카테고리 아이콘은 shared 의 `CUSTOM_ICONS` 에 그리고, 웹은 `ICONS` 에, 모바일은 `CategoryGlyph` 가 쓰는 `ICON_CHOICES` 에 이름을 더한다.
 - **모달 성격 화면(거래 입력 등)을 닫을 때는 `useCloseModal()`(`src/lib/nav.ts`).** 주소로 바로 열린 경우 `navigate(-1)` 은 앱 밖으로 나간다.
 - **삭제·나가기 확인은 `confirm()`(`src/components/dialog.tsx`).** 브라우저 `window.confirm` 은 쓰지 않는다.
 - **서비스워커는 앱 셸만 캐시한다. API 응답은 캐시하지 않는다** — 오래된 잔액·내역을 보여주면 안 되므로. 오프라인 데이터 지원을 넣을 때는 이 결정을 먼저 다시 검토한다.
