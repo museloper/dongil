@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { currentMonth, formatWon, shiftMonth, type BudgetDto, type CategoryDto } from '@dongil/shared';
+import { currentMonth, formatWon, groupCategories, shiftMonth, type BudgetDto, type CategoryDto } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { toast } from '@/components/dialog';
 import { MoneyInput } from '@/components/money-input';
@@ -26,7 +26,7 @@ export default function BudgetEditPage() {
       </main>
     );
   }
-  return <BudgetEditor month={month} initial={budget.data} categories={categories.data.filter((c) => c.type === 'EXPENSE')} />;
+  return <BudgetEditor month={month} initial={budget.data} categories={groupCategories(categories.data.filter((c) => c.type === 'EXPENSE')).flatMap((g) => [g.parent, ...g.children])} />;
 }
 
 const toState = (b: BudgetDto) => ({
@@ -99,8 +99,8 @@ function BudgetEditor({ month, initial, categories }: { month: string; initial: 
             <AppText variant="caption" tone="textSub" className="tabular">합계 {formatWon(catSum)}</AppText>
           </div>
           {categories.map((c) => (
-            <div key={c.id} className="row" style={{ gap: 10 }}>
-              <CategoryIcon icon={c.icon} color={c.color} size={36} />
+            <div key={c.id} className="row" style={{ gap: 10, paddingLeft: c.parentId ? 20 : 0 }}>
+              <CategoryIcon icon={c.icon} color={c.color} size={c.parentId ? 28 : 36} />
               <AppText lines={1} style={{ width: 64, flexShrink: 0 }}>{c.name}</AppText>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <MoneyInput

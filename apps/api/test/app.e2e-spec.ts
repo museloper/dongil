@@ -200,7 +200,7 @@ describe('Dongil API (e2e)', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/csv');
     const lines = res.text.replace('﻿', '').split('\r\n');
-    expect(lines[0]).toBe('날짜,구분,카테고리,금액,계좌,받는계좌,메모,작성자,중요도,태그');
+    expect(lines[0]).toBe('날짜,구분,카테고리,금액,계좌,받는계좌,메모,작성자,중요도,태그,세부카테고리');
     expect(lines).toHaveLength(3);
   });
 

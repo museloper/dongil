@@ -30,12 +30,12 @@ export class ExportController {
       include: txInclude,
       orderBy: { occurredAt: 'asc' },
     });
-    const header = ['날짜', '구분', '카테고리', '금액', '계좌', '받는계좌', '메모', '작성자', '중요도', '태그'];
+    const header = ['날짜', '구분', '카테고리', '금액', '계좌', '받는계좌', '메모', '작성자', '중요도', '태그', '세부카테고리'];
     const lines = rows.map((t) =>
       [
         toLocalDateKey(t.occurredAt),
         TYPE_LABEL[t.type],
-        t.category?.name,
+        t.category?.parent?.name ?? t.category?.name,
         Number(t.amount),
         t.account.name,
         t.toAccount?.name,
@@ -43,6 +43,7 @@ export class ExportController {
         t.createdBy.nickname,
         t.importance,
         t.tags.map((tag) => tag.name).join(' '),
+        t.category?.parent ? t.category.name : null,
       ]
         .map(csvCell)
         .join(','),

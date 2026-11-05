@@ -289,6 +289,8 @@ export interface CategoryInput {
   type: CategoryType;
   icon: string;
   color: string;
+  /** 있으면 세부 카테고리. 수정할 때 null 이면 최상위로 꺼낸다 */
+  parentId?: string | null;
 }
 
 export function useSaveCategory() {

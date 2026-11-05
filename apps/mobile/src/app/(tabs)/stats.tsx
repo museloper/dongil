@@ -1,7 +1,8 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { formatWon, type Importance, type SummaryDto } from '@dongil/shared';
+import { categoryLabel, formatWon, type Importance, type SummaryDto } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { DonutChart, TrendBars } from '@/components/charts';
 import { CountUp } from '@/components/money';
@@ -101,8 +102,10 @@ function Stats() {
                     <CountUp value={catTotal} variant="heading" />
                   </DonutChart>
                   <View style={{ alignSelf: 'stretch', gap: 14 }}>
-                    {cats.map((c, i) => (
-                      <Animated.View key={c.categoryId} entering={FadeInDown.delay(120 + i * 40).duration(400)}>
+                    {cats.map((c, i) => {
+                      const open = c.categoryId === categoryId || c.children.some((sub) => sub.categoryId === categoryId);
+                      return (
+                      <Animated.View key={c.categoryId} entering={FadeInDown.delay(120 + i * 40).duration(400)} style={{ gap: 10 }}>
                         <PressableScale
                           scaleTo={0.98}
                           onPress={() => setCategory(c.categoryId === categoryId ? undefined : { id: c.categoryId, name: c.name })}
@@ -115,14 +118,39 @@ function Stats() {
                                 <AppText variant="label" tone="textMuted">
                                   {Math.round(c.ratio * 100)}%
                                 </AppText>
+                                {c.children.length > 0 && <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />}
                               </AppText>
                               <AppText variant="heading">{formatWon(c.amount)}</AppText>
                             </View>
                             <ProgressBar ratio={c.ratio} height={6} color={c.color} />
                           </View>
                         </PressableScale>
+                        {open &&
+                          c.children.map((sub) =>
+                            // 상위에 바로 기록한 지출은 따로 고를 조건이 없으므로 보여 주기만 한다
+                            sub.categoryId === c.categoryId ? (
+                              <View key={sub.categoryId} style={{ paddingLeft: 48 }}>
+                                <SubcategoryRow name="세부 없음" ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                              </View>
+                            ) : (
+                              <PressableScale
+                                key={sub.categoryId}
+                                scaleTo={0.98}
+                                onPress={() =>
+                                  setCategory(
+                                    sub.categoryId === categoryId
+                                      ? { id: c.categoryId, name: c.name }
+                                      : { id: sub.categoryId, name: categoryLabel({ name: sub.name, parentName: c.name }) },
+                                  )
+                                }
+                                style={[styles.statRow, { paddingLeft: 54 }, sub.categoryId === categoryId && { backgroundColor: colors.primarySoft }]}>
+                                <SubcategoryRow name={sub.name} ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                              </PressableScale>
+                            ),
+                          )}
                       </Animated.View>
-                    ))}
+                      );
+                    })}
                   </View>
                 </>
               ) : (
@@ -262,6 +290,18 @@ function Row({ label, value, tone = 'text', bold }: { label: string; value: stri
     <View style={styles.between}>
       <AppText tone="textSub">{label}</AppText>
       <AppText variant={bold ? 'heading' : 'body'} tone={tone}>{value}</AppText>
+    </View>
+  );
+}
+
+function SubcategoryRow({ name, ratio, amount, color }: { name: string; ratio: number; amount: number; color: string }) {
+  return (
+    <View style={{ gap: 5 }}>
+      <View style={styles.between}>
+        <AppText variant="label" tone="textSub" numberOfLines={1} style={{ flexShrink: 1 }}>{name} {Math.round(ratio * 100)}%</AppText>
+        <AppText variant="label">{formatWon(amount)}</AppText>
+      </View>
+      <ProgressBar ratio={ratio} height={4} color={color} />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type Category } from '@prisma/client';
 import {
   IMPORTANCE_LEVELS,
   monthRange,
@@ -85,7 +85,8 @@ export class StatsService {
   /** 겹쳐 보는 조건. 값이 없는 조건은 undefined 라 Prisma 가 무시한다 */
   private breakdownFilter(q: StatsBreakdownQuery): Prisma.TransactionWhereInput {
     return {
-      categoryId: q.categoryId,
+      // 상위 카테고리 조건은 세부 카테고리 지출까지 포함한다
+      ...(q.categoryId && { category: { OR: [{ id: q.categoryId }, { parentId: q.categoryId }] } }),
       importance: q.importance === 'NONE' ? null : q.importance,
       ...(q.tagId && { tags: { some: { id: q.tagId } } }),
     };
@@ -132,12 +133,33 @@ export class StatsService {
     const { start, end } = monthRange(q.month);
     const sums = await this.expenseByCategory(bookId, start, end, q.accountId, this.breakdownFilter(q));
     if (sums.size === 0) return [];
-    const cats = await this.prisma.category.findMany({ where: { id: { in: [...sums.keys()] } } });
+    const cats = await this.prisma.category.findMany({ where: { id: { in: [...sums.keys()] } }, include: { parent: true } });
     const total = [...sums.values()].reduce((a, b) => a + b, 0);
-    return cats
-      .map((c) => {
-        const amount = sums.get(c.id) ?? 0;
-        return { categoryId: c.id, name: c.name, icon: c.icon, color: c.color, amount, ratio: total ? amount / total : 0 };
+
+    // 세부 카테고리 지출을 상위로 합친다. 지출이 세부에만 있어도 상위 줄이 생긴다
+    const groups = new Map<string, { top: Category; own: number; subs: { categoryId: string; name: string; amount: number }[] }>();
+    for (const c of cats) {
+      const top = c.parent ?? c;
+      const group = groups.get(top.id) ?? { top, own: 0, subs: [] };
+      const amount = sums.get(c.id) ?? 0;
+      if (c.parent) group.subs.push({ categoryId: c.id, name: c.name, amount });
+      else group.own = amount;
+      groups.set(top.id, group);
+    }
+
+    return [...groups.values()]
+      .map(({ top, own, subs }) => {
+        const amount = own + subs.reduce((sum, s) => sum + s.amount, 0);
+        const rows = subs.length && own ? [...subs, { categoryId: top.id, name: top.name, amount: own }] : subs;
+        return {
+          categoryId: top.id,
+          name: top.name,
+          icon: top.icon,
+          color: top.color,
+          amount,
+          ratio: total ? amount / total : 0,
+          children: rows.sort((a, b) => b.amount - a.amount).map((s) => ({ ...s, ratio: amount ? s.amount / amount : 0 })),
+        };
       })
       .sort((a, b) => b.amount - a.amount);
   }

@@ -68,12 +68,16 @@ export const CategoryCreateSchema = z.object({
   type: CategoryTypeEnum,
   icon: z.string().min(1).max(40),
   color: hexColor,
+  /** 있으면 그 카테고리의 세부 카테고리. 아이콘과 색은 상위를 따른다 */
+  parentId: z.string().min(1).nullish(),
 });
 export const CategoryUpdateSchema = z.object({
   name: z.string().min(1).max(20).optional(),
   icon: z.string().min(1).max(40).optional(),
   color: hexColor.optional(),
   sortOrder: z.number().int().min(0).optional(),
+  /** 보내지 않으면 그대로 둔다. null 이면 최상위로 꺼낸다 */
+  parentId: z.string().min(1).nullable().optional(),
 });
 
 export const IMPORTANCE_LEVELS = ['A', 'B', 'C'] as const;

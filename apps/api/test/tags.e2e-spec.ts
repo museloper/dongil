@@ -168,8 +168,8 @@ describe('중요도와 태그 (e2e)', () => {
     const tx = await createTx({ importance: 'B', tags: ['내보내기', '확인'] });
     const res = await as('a', api().get(path('/export/csv')).query({ from: '2026-11-01T00:00:00.000Z', to: '2026-12-01T00:00:00.000Z' }));
     const [header, line] = res.text.replace('﻿', '').split('\r\n');
-    expect(header.endsWith('중요도,태그')).toBe(true);
-    expect(line.endsWith(',B,내보내기 확인')).toBe(true);
+    expect(header.endsWith('중요도,태그,세부카테고리')).toBe(true);
+    expect(line.endsWith(',B,내보내기 확인,')).toBe(true);
     await as('a', api().delete(path(`/transactions/${tx.id}`)));
   });
 });

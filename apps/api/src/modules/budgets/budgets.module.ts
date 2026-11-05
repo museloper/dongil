@@ -17,16 +17,20 @@ export class BudgetsService {
 
   async get(bookId: string, month: string): Promise<BudgetDto> {
     const { start, end } = monthRange(month);
-    const [budgets, byCat, totals] = await Promise.all([
+    const [budgets, byCat, totals, subs] = await Promise.all([
       this.prisma.budget.findMany({ where: { bookId, month }, include: { category: true } }),
       this.stats.expenseByCategory(bookId, start, end),
       this.stats.totals(bookId, start, end),
+      this.prisma.category.findMany({ where: { bookId, parentId: { not: null } }, select: { id: true, parentId: true } }),
     ]);
+    // 상위 카테고리 예산의 사용액에는 세부 카테고리 지출도 들어간다
+    const spentOf = (categoryId: string) =>
+      subs.filter((s) => s.parentId === categoryId).reduce((sum, s) => sum + (byCat.get(s.id) ?? 0), byCat.get(categoryId) ?? 0);
 
     const items = budgets
       .map((b) => {
         const amount = Number(b.amount);
-        const spent = b.categoryId ? (byCat.get(b.categoryId) ?? 0) : totals.expense;
+        const spent = b.categoryId ? spentOf(b.categoryId) : totals.expense;
         return {
           categoryId: b.categoryId,
           categoryName: b.category?.name ?? null,

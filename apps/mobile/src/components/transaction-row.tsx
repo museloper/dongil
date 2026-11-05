@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { formatSigned, toLocalDateKey, type TransactionDto } from '@dongil/shared';
+import { categoryLabel, formatSigned, toLocalDateKey, type TransactionDto } from '@dongil/shared';
 import { useCurrentBook } from '@/features/queries';
 import { useTheme } from '@/theme/theme';
 import { formatTimeLabel, toTimeKey } from '@/lib/date';
@@ -25,7 +25,7 @@ export function TransactionRow({ tx }: { tx: TransactionDto }) {
   const { colors } = useTheme();
   const shared = useCurrentBook().book?.type === 'SHARED';
   const isTransfer = tx.type === 'TRANSFER';
-  const categoryName = tx.category?.name ?? '미분류';
+  const categoryName = tx.category ? categoryLabel(tx.category) : '미분류';
   // 아이콘이 이미 카테고리를 알려주므로 거래를 구별하는 메모를 제목으로 쓴다. 메모가 없으면 카테고리로 대신한다
   const title = isTransfer ? '이체' : tx.memo || categoryName;
   // 공유 가계부에서는 시간에 이어서 기록한 사람을 표시

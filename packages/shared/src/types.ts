@@ -28,6 +28,8 @@ export interface CategoryDto {
   icon: string;
   color: string;
   sortOrder: number;
+  /** 세부 카테고리면 상위 카테고리 id. 2단계까지만 둔다 */
+  parentId: string | null;
 }
 
 type AccountRef = Pick<AccountDto, 'id' | 'name' | 'color'>;
@@ -51,7 +53,7 @@ export interface TransactionDto {
   occurredAt: string;
   account: AccountRef;
   toAccount: AccountRef | null;
-  category: CategoryRef | null;
+  category: (CategoryRef & { parentName: string | null }) | null;
   importance: Importance | null;
   tags: Pick<TagDto, 'id' | 'name'>[];
   /** 거래를 기록한 사람 (공유 가계부에서 표시) */
@@ -112,13 +114,24 @@ export interface SummaryDto {
   transferIn: number;
   transferOut: number;
 }
+export interface SubcategoryStatDto {
+  /** 상위 카테고리 id 와 같으면 세부 없이 상위에 바로 기록한 지출 */
+  categoryId: string;
+  name: string;
+  amount: number;
+  /** 상위 카테고리 금액 대비 */
+  ratio: number;
+}
 export interface CategoryStatDto {
+  /** 언제나 최상위 카테고리. 세부 카테고리 금액은 여기에 합쳐진다 */
   categoryId: string;
   name: string;
   icon: string;
   color: string;
   amount: number;
   ratio: number;
+  /** 세부 카테고리 지출이 있을 때만 채운다 */
+  children: SubcategoryStatDto[];
 }
 export interface ImportanceStatDto {
   /** null 은 중요도를 달지 않은 지출 */

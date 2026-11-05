@@ -2,7 +2,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { currentMonth, formatWon, shiftMonth, type BudgetDto, type CategoryDto } from '@dongil/shared';
+import { currentMonth, formatWon, groupCategories, shiftMonth, type BudgetDto, type CategoryDto } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
 import { MoneyInput } from '@/components/money-input';
 import { AppText, Button, Card, IconButton, Loading, haptic } from '@/components/ui';
@@ -22,7 +22,7 @@ export default function BudgetEditScreen() {
     <BudgetEditor
       month={month}
       initial={budget.data}
-      categories={categories.data.filter((c) => c.type === 'EXPENSE')}
+      categories={groupCategories(categories.data.filter((c) => c.type === 'EXPENSE')).flatMap((g) => [g.parent, ...g.children])}
     />
   );
 }
@@ -104,8 +104,8 @@ function BudgetEditor({ month, initial, categories }: { month: string; initial: 
             <AppText variant="caption" tone="textSub">합계 {formatWon(catSum)}</AppText>
           </View>
           {categories.map((c) => (
-            <View key={c.id} style={styles.catRow}>
-              <CategoryIcon icon={c.icon} color={c.color} size={36} />
+            <View key={c.id} style={[styles.catRow, c.parentId ? { paddingLeft: 20 } : null]}>
+              <CategoryIcon icon={c.icon} color={c.color} size={c.parentId ? 28 : 36} />
               <AppText style={{ width: 56 }} numberOfLines={1}>{c.name}</AppText>
               <View style={{ flex: 1 }}>
                 <MoneyInput

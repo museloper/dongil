@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import {
   formatWon,
+  groupCategories,
   IMPORTANCE_LEVELS,
   TAG_MAX_LENGTH,
   TAG_MAX_PER_TRANSACTION,
@@ -49,6 +50,10 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
     (a, b) => Number(b.id === book?.defaultAccountId) - Number(a.id === book?.defaultAccountId),
   );
   const cats = (categories.data ?? []).filter((c) => c.type === type);
+  const groups = groupCategories(cats);
+  // 세부를 골라도 상위 칸이 선택된 것으로 보이고, 그 아래에 세부 선택지가 열린다
+  const picked = cats.find((c) => c.id === categoryId);
+  const openGroup = groups.find((g) => g.parent.id === (picked?.parentId ?? picked?.id));
   const suggestions = (usedTags.data ?? []).filter((t) => !tags.includes(t.name));
   const fromId = accountId ?? accountList[0]?.id ?? null;
   const dateKey = toLocalDateKey(new Date(occurredAt));
@@ -154,8 +159,8 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
             {type !== 'TRANSFER' ? (
               <Field label="카테고리">
                 <div className="cat-grid">
-                  {cats.map((c) => {
-                    const active = c.id === categoryId;
+                  {groups.map(({ parent: c }) => {
+                    const active = c.id === openGroup?.parent.id;
                     return (
                       <Pressable
                         key={c.id}
@@ -169,6 +174,14 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
                     );
                   })}
                 </div>
+                {openGroup && openGroup.children.length > 0 && (
+                  <div className="hscroll">
+                    <Chip label="세부 없음" active={categoryId === openGroup.parent.id} onClick={() => setCategoryId(openGroup.parent.id)} />
+                    {openGroup.children.map((c) => (
+                      <Chip key={c.id} label={c.name} active={c.id === categoryId} color={c.color} onClick={() => setCategoryId(c.id)} />
+                    ))}
+                  </div>
+                )}
               </Field>
             ) : null}
 

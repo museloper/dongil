@@ -75,6 +75,9 @@ cd apps/web
   - 참여할 때 정원 확인은 Serializable 트랜잭션 안에서 한다.
   - `Book` 은 사용자 삭제에 cascade 되지 않는다. 테스트 정리는 `test/cleanup.ts` 의 `deleteUsers` 를 쓴다.
 - **계좌와 카테고리는 삭제하지 않고 `archived` 로 숨긴다.** 과거 거래가 참조하기 때문이다.
+- **세부 카테고리는 2단계까지만 둔다**(`Category.parentId`). 아이콘과 색은 상위를 따르고, 상위를 숨기면 세부도 숨긴다.
+  - 거래는 상위나 세부 어느 쪽에도 달 수 있다. 통계·예산은 세부 지출을 상위로 합치고, `categoryId` 조건은 상위면 세부까지 포함한다.
+  - `expenseByCategory` 는 합치기 전의 카테고리별 합계를 준다. 상위 금액이 필요하면 세부를 더한다.
 - **인증:** 전역 `AuthGuard` 가 기본으로 적용된다. 공개 엔드포인트만 `@Public()` 을 붙인다.
   - Access 토큰 15분, Refresh 토큰 14일이며, refresh 할 때마다 회전하고 재사용을 막는다.
 

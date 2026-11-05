@@ -1,5 +1,6 @@
-import { formatWon, type Importance, type SummaryDto } from '@dongil/shared';
+import { categoryLabel, formatWon, type Importance, type SummaryDto } from '@dongil/shared';
 import { CategoryIcon } from '@/components/category-icon';
+import { Icon } from '@/components/icon';
 import { DonutChart, TrendBars } from '@/components/charts';
 import { CountUp } from '@/components/money';
 import { MonthSwitcher } from '@/components/month-switcher';
@@ -95,9 +96,11 @@ function Stats() {
                   <CountUp value={catTotal} variant="heading" />
                 </DonutChart>
                 <div style={{ justifySelf: 'stretch', display: 'grid', gap: 14 }}>
-                  {cats.map((c, i) => (
+                  {cats.map((c, i) => {
+                    const open = c.categoryId === categoryId || c.children.some((sub) => sub.categoryId === categoryId);
+                    return (
+                    <div key={c.categoryId} style={{ display: 'grid', gap: 10 }}>
                     <Pressable
-                      key={c.categoryId}
                       className={`stat-row row fade-in-up${c.categoryId === categoryId ? ' stat-row-active' : ''}`}
                       aria-pressed={c.categoryId === categoryId}
                       style={{ gap: 12, animationDelay: `${120 + i * 40}ms` }}
@@ -108,13 +111,40 @@ function Stats() {
                           <AppText lines={1}>
                             {c.name}{' '}
                             <AppText variant="label" tone="textMuted">{Math.round(c.ratio * 100)}%</AppText>
+                            {c.children.length > 0 && <Icon name={open ? 'chevron-up' : 'chevron-down'} size={14} color="var(--textMuted)" style={{ marginLeft: 4, verticalAlign: 'middle' }} />}
                           </AppText>
                           <AppText variant="heading" className="tabular nowrap">{formatWon(c.amount)}</AppText>
                         </div>
                         <ProgressBar ratio={c.ratio} height={6} color={c.color} />
                       </div>
                     </Pressable>
-                  ))}
+                    {open &&
+                      c.children.map((sub) =>
+                        // 상위에 바로 기록한 지출은 따로 고를 조건이 없으므로 보여 주기만 한다
+                        sub.categoryId === c.categoryId ? (
+                          <div key={sub.categoryId} style={{ paddingLeft: 48 }}>
+                            <SubcategoryRow name="세부 없음" ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                          </div>
+                        ) : (
+                          <Pressable
+                            key={sub.categoryId}
+                            className={`stat-row${sub.categoryId === categoryId ? ' stat-row-active' : ''}`}
+                            aria-pressed={sub.categoryId === categoryId}
+                            style={{ paddingLeft: 54 }}
+                            onClick={() =>
+                              setCategory(
+                                sub.categoryId === categoryId
+                                  ? { id: c.categoryId, name: c.name }
+                                  : { id: sub.categoryId, name: categoryLabel({ name: sub.name, parentName: c.name }) },
+                              )
+                            }>
+                            <SubcategoryRow name={sub.name} ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                          </Pressable>
+                        ),
+                      )}
+                    </div>
+                    );
+                  })}
                 </div>
               </>
             ) : (
@@ -232,6 +262,18 @@ function Stats() {
 const balanceChange = (s: SummaryDto) => s.income - s.expense + s.transferIn - s.transferOut;
 
 const signedWon = (v: number) => (v > 0 ? '+' : v < 0 ? '-' : '') + formatWon(Math.abs(v));
+
+function SubcategoryRow({ name, ratio, amount, color }: { name: string; ratio: number; amount: number; color: string }) {
+  return (
+    <div style={{ display: 'grid', gap: 5, minWidth: 0 }}>
+      <div className="row between" style={{ gap: 8 }}>
+        <AppText variant="label" tone="textSub" lines={1}>{name} {Math.round(ratio * 100)}%</AppText>
+        <AppText variant="label" className="tabular nowrap">{formatWon(amount)}</AppText>
+      </div>
+      <ProgressBar ratio={ratio} height={4} color={color} />
+    </div>
+  );
+}
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (

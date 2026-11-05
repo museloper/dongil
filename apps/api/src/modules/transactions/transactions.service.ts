@@ -15,7 +15,8 @@ export class TransactionsService {
     const where: Prisma.TransactionWhereInput = {
       bookId,
       type: q.type,
-      categoryId: q.categoryId,
+      // 상위 카테고리로 찾으면 세부 카테고리 거래도 함께 나온다
+      ...(q.categoryId && { category: { OR: [{ id: q.categoryId }, { parentId: q.categoryId }] } }),
       ...(q.tagId && { tags: { some: { id: q.tagId } } }),
       occurredAt: { gte: q.from ? new Date(q.from) : undefined, lt: q.to ? new Date(q.to) : undefined },
       ...(q.accountId && { OR: [{ accountId: q.accountId }, { toAccountId: q.accountId }] }),
@@ -25,6 +26,7 @@ export class TransactionsService {
             OR: [
               { memo: { contains: q.q, mode: 'insensitive' } },
               { category: { name: { contains: q.q, mode: 'insensitive' } } },
+              { category: { parent: { name: { contains: q.q, mode: 'insensitive' } } } },
               { tags: { some: { name: { contains: q.q, mode: 'insensitive' } } } },
             ],
           },

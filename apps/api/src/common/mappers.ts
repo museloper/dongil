@@ -17,12 +17,13 @@ export const toCategoryDto = (c: Category): CategoryDto => ({
   icon: c.icon,
   color: c.color,
   sortOrder: c.sortOrder,
+  parentId: c.parentId,
 });
 
 type TxWithRelations = Transaction & {
   account: Account;
   toAccount: Account | null;
-  category: Category | null;
+  category: (Category & { parent: { name: string } | null }) | null;
   tags: { id: string; name: string }[];
   createdBy: { id: string; nickname: string };
 };
@@ -30,7 +31,7 @@ type TxWithRelations = Transaction & {
 export const txInclude = {
   account: true,
   toAccount: true,
-  category: true,
+  category: { include: { parent: { select: { name: true } } } },
   tags: { select: { id: true, name: true }, orderBy: { name: 'asc' } },
   createdBy: { select: { id: true, nickname: true } },
 } as const;
@@ -44,7 +45,13 @@ export const toTransactionDto = (t: TxWithRelations): TransactionDto => ({
   account: { id: t.account.id, name: t.account.name, color: t.account.color },
   toAccount: t.toAccount ? { id: t.toAccount.id, name: t.toAccount.name, color: t.toAccount.color } : null,
   category: t.category
-    ? { id: t.category.id, name: t.category.name, icon: t.category.icon, color: t.category.color }
+    ? {
+        id: t.category.id,
+        name: t.category.name,
+        icon: t.category.icon,
+        color: t.category.color,
+        parentName: t.category.parent?.name ?? null,
+      }
     : null,
   importance: t.importance,
   tags: t.tags,
