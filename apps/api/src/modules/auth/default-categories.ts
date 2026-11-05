@@ -17,6 +17,7 @@ export const DEFAULT_CATEGORIES: { name: string; type: CategoryType; icon: strin
   { name: '보험', type: 'EXPENSE', icon: 'heart', color: '#F06595' },
   { name: '경조사', type: 'EXPENSE', icon: 'gift', color: '#E64980' },
   { name: '모임통장', type: 'EXPENSE', icon: 'people', color: '#4C6EF5' },
+  { name: '기부', type: 'EXPENSE', icon: 'ribbon', color: '#FF8787' },
   { name: '구독', type: 'EXPENSE', icon: 'repeat', color: '#748FFC' },
   // 저축·투자도 이번 달에 쓸 수 있는 돈에서 빠져나가므로 지출로 기록한다
   { name: '저금', type: 'EXPENSE', icon: 'cash', color: '#38D9A9' },
@@ -26,5 +27,6 @@ export const DEFAULT_CATEGORIES: { name: string; type: CategoryType; icon: strin
   { name: '월급', type: 'INCOME', icon: 'wallet', color: '#3182F6' },
   { name: '용돈', type: 'INCOME', icon: 'gift', color: '#20C997' },
   { name: '부수입', type: 'INCOME', icon: 'trending-up', color: '#FAB005' },
+  { name: '이자', type: 'INCOME', icon: 'cash', color: '#51CF66' },
   { name: '기타수입', type: 'INCOME', icon: 'add-circle', color: '#ADB5BD' },
 ];

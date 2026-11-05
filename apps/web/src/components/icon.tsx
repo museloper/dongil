@@ -110,6 +110,7 @@ const ICONS = {
   'ellipsis-horizontal': io.ellipsisHorizontal,
   'ellipsis-vertical': io.ellipsisVertical,
   happy: io.happy,
+  ribbon: io.ribbon,
   'baby-crawl': customIcon('baby-crawl'),
 } as const;
 

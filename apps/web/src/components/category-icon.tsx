@@ -18,5 +18,5 @@ export const ICON_CHOICES: IconName[] = [
   'bag-handle', 'cart', 'shirt', 'home', 'bulb', 'water', 'phone-portrait', 'wifi',
   'film', 'game-controller', 'musical-notes', 'book', 'school', 'barbell', 'medkit', 'heart',
   'paw', 'gift', 'repeat', 'card', 'wallet', 'trending-up', 'cash', 'business',
-  'briefcase', 'add-circle', 'ellipsis-horizontal', 'happy', 'baby-crawl', 'people',
+  'briefcase', 'add-circle', 'ellipsis-horizontal', 'happy', 'baby-crawl', 'people', 'ribbon',
 ];
