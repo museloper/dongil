@@ -129,8 +129,8 @@ function Stats() {
                           c.children.map((sub) =>
                             // 상위에 바로 기록한 지출은 따로 고를 조건이 없으므로 보여 주기만 한다
                             sub.categoryId === c.categoryId ? (
-                              <View key={sub.categoryId} style={{ paddingLeft: 48 }}>
-                                <SubcategoryRow name="세부 없음" ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                              <View key={sub.categoryId} style={{ paddingLeft: 12 }}>
+                                <SubcategoryRow icon={sub.icon} name="세부 없음" ratio={sub.ratio} amount={sub.amount} color={c.color} />
                               </View>
                             ) : (
                               <PressableScale
@@ -143,8 +143,8 @@ function Stats() {
                                       : { id: sub.categoryId, name: categoryLabel({ name: sub.name, parentName: c.name }) },
                                   )
                                 }
-                                style={[styles.statRow, { paddingLeft: 54 }, sub.categoryId === categoryId && { backgroundColor: colors.primarySoft }]}>
-                                <SubcategoryRow name={sub.name} ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                                style={[styles.statRow, { paddingLeft: 18 }, sub.categoryId === categoryId && { backgroundColor: colors.primarySoft }]}>
+                                <SubcategoryRow icon={sub.icon} name={sub.name} ratio={sub.ratio} amount={sub.amount} color={c.color} />
                               </PressableScale>
                             ),
                           )}
@@ -294,14 +294,17 @@ function Row({ label, value, tone = 'text', bold }: { label: string; value: stri
   );
 }
 
-function SubcategoryRow({ name, ratio, amount, color }: { name: string; ratio: number; amount: number; color: string }) {
+function SubcategoryRow({ icon, name, ratio, amount, color }: { icon: string; name: string; ratio: number; amount: number; color: string }) {
   return (
-    <View style={{ gap: 5 }}>
-      <View style={styles.between}>
-        <AppText variant="label" tone="textSub" numberOfLines={1} style={{ flexShrink: 1 }}>{name} {Math.round(ratio * 100)}%</AppText>
-        <AppText variant="label">{formatWon(amount)}</AppText>
+    <View style={[styles.catRow, { gap: 8 }]}>
+      <CategoryIcon icon={icon} color={color} size={28} />
+      <View style={{ flex: 1, gap: 5 }}>
+        <View style={styles.between}>
+          <AppText variant="label" tone="textSub" numberOfLines={1} style={{ flexShrink: 1 }}>{name} {Math.round(ratio * 100)}%</AppText>
+          <AppText variant="label">{formatWon(amount)}</AppText>
+        </View>
+        <ProgressBar ratio={ratio} height={4} color={color} />
       </View>
-      <ProgressBar ratio={ratio} height={4} color={color} />
     </View>
   );
 }

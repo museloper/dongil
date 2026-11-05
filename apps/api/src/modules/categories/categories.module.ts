@@ -27,7 +27,7 @@ export class CategoriesService {
       data: {
         ...input,
         parentId: parent?.id ?? null,
-        ...(parent && { icon: parent.icon, color: parent.color }),
+        ...(parent && { color: parent.color }),
         bookId,
         sortOrder: (last._max.sortOrder ?? -1) + 1,
       },
@@ -48,14 +48,16 @@ export class CategoriesService {
     return this.prisma.$transaction(async (tx) => {
       const row = await tx.category.update({
         where: { id },
-        data: { ...input, parentId, ...(parent && { icon: parent.icon, color: parent.color }) },
+        data: { ...input, parentId, ...(parent && { color: parent.color }) },
       });
-      // 세부 카테고리는 상위의 아이콘과 색을 따른다. 숨긴 것도 과거 내역에 표시되므로 함께 바꾼다
+      // 세부 카테고리는 상위의 색을 따른다. 숨긴 것도 과거 내역에 표시되므로 함께 바꾼다
       if (moving) {
         // 2단계를 넘지 않도록 숨겨 둔 세부 카테고리는 새 상위로 함께 옮긴다
-        await tx.category.updateMany({ where: { parentId: id }, data: { parentId: parent.id, icon: parent.icon, color: parent.color } });
+        await tx.category.updateMany({ where: { parentId: id }, data: { parentId: parent.id, color: parent.color } });
       } else if (!parent) {
-        await tx.category.updateMany({ where: { parentId: id }, data: { icon: row.icon, color: row.color } });
+        // 상위와 같은 아이콘을 쓰던 세부만 따라 바꾸고, 따로 고른 아이콘은 그대로 둔다
+        await tx.category.updateMany({ where: { parentId: id, icon: current.icon }, data: { icon: row.icon } });
+        await tx.category.updateMany({ where: { parentId: id }, data: { color: row.color } });
       }
       return toCategoryDto(row);
     });

@@ -663,6 +663,12 @@ button.plain {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: 0 -4px;
 }
+.sub-cat-grid {
+  margin: 0;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--fill);
+}
 .cat-item {
   display: grid;
   justify-items: center;

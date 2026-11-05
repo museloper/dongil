@@ -57,12 +57,12 @@ describe('세부 카테고리 (e2e)', () => {
     await app.close();
   });
 
-  it('세부 카테고리는 상위의 종류 안에서 만들고 아이콘과 색을 물려받는다', async () => {
+  it('세부 카테고리는 상위의 종류 안에서 만들고, 아이콘은 따로 갖고 색은 상위를 따른다', async () => {
     const res = await addCategory({ name: '외식', parentId: food.id });
     expect(res.status).toBe(201);
     eatOut = res.body;
-    expect(eatOut).toMatchObject({ parentId: food.id, icon: food.icon, color: food.color, type: 'EXPENSE' });
-    groceries = (await addCategory({ name: '장보기', parentId: food.id })).body;
+    expect(eatOut).toMatchObject({ parentId: food.id, icon: 'happy', color: food.color, type: 'EXPENSE' });
+    groceries = (await addCategory({ name: '장보기', parentId: food.id, icon: food.icon })).body;
     expect(food.parentId).toBeNull();
   });
 
@@ -78,23 +78,25 @@ describe('세부 카테고리 (e2e)', () => {
     expect((await patch(bus.id, { parentId: eatOut.id })).status).toBe(400);
   });
 
-  it('기존 카테고리를 세부로 옮기면 상위 아이콘을 따르고, 꺼내면 최상위가 된다', async () => {
+  it('기존 카테고리를 세부로 옮기면 아이콘은 유지하고 색만 상위를 따르며, 꺼내면 최상위가 된다', async () => {
     const moved = await patch(cafe.id, { parentId: food.id });
     expect(moved.status).toBe(200);
-    expect(moved.body).toMatchObject({ parentId: food.id, icon: food.icon, color: food.color });
+    expect(moved.body).toMatchObject({ parentId: food.id, icon: cafe.icon, color: food.color });
     const back = await patch(cafe.id, { parentId: null, icon: 'cafe', color: '#C08457' });
     expect(back.body).toMatchObject({ parentId: null, icon: 'cafe', color: '#C08457' });
   });
 
-  it('세부 카테고리는 자기 아이콘을 따로 갖지 않고, 상위를 바꾸면 함께 바뀐다', async () => {
+  it('세부의 색은 바꿀 수 없고, 상위를 바꾸면 같은 아이콘을 쓰던 세부만 아이콘이 따라 바뀐다', async () => {
     const own = await patch(eatOut.id, { name: '외식비', icon: 'cafe', color: '#000000' });
-    expect(own.body).toMatchObject({ name: '외식비', icon: food.icon, color: food.color });
+    expect(own.body).toMatchObject({ name: '외식비', icon: 'cafe', color: food.color });
     await patch(eatOut.id, { name: '외식' });
 
     await patch(food.id, { icon: 'beer', color: '#ABCDEF' });
     const list = await cats();
-    expect(list.find((c) => c.id === eatOut.id)).toMatchObject({ icon: 'beer', color: '#ABCDEF' });
+    expect(list.find((c) => c.id === eatOut.id)).toMatchObject({ icon: 'cafe', color: '#ABCDEF' });
+    expect(list.find((c) => c.id === groceries.id)).toMatchObject({ icon: 'beer', color: '#ABCDEF' });
     await patch(food.id, { icon: food.icon, color: food.color });
+    expect((await cats()).find((c) => c.id === groceries.id)).toMatchObject({ icon: food.icon, color: food.color });
   });
 
   describe('집계', () => {
@@ -123,6 +125,7 @@ describe('세부 카테고리 (e2e)', () => {
         [eatOut.id, '외식', 3000],
       ]);
       expect(rows[0].children[2].ratio).toBeCloseTo(0.2);
+      expect(rows[0].children.map((c) => c.icon)).toEqual([food.icon, food.icon, 'cafe']);
       expect(rows[0].ratio).toBeCloseTo(15000 / 15100);
       expect(rows[1].children).toEqual([]);
     });

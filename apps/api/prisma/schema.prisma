@@ -132,7 +132,7 @@ model Category {
   color     String
   sortOrder Int          @default(0)
   archived  Boolean      @default(false)
-  /// 세부 카테고리면 상위 카테고리. 2단계까지만 두고, 아이콘과 색은 상위를 따른다.
+  /// 세부 카테고리면 상위 카테고리. 2단계까지만 두고, 색은 상위를 따른다.
   parentId  String?
 
   book         Book            @relation(fields: [bookId], references: [id], onDelete: Cascade)

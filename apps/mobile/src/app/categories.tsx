@@ -112,7 +112,7 @@ function CategoryEditor({ type, category, initialParent, parents, hasChildren, o
   const [form, setForm] = useState<CategoryInput>({
     name: category?.name ?? '',
     type,
-    icon: category?.icon ?? 'happy',
+    icon: category?.icon ?? initialParent?.icon ?? 'happy',
     color: category?.color ?? SWATCHES[6],
     parentId: category?.parentId ?? initialParent?.id ?? null,
   });
@@ -143,7 +143,7 @@ function CategoryEditor({ type, category, initialParent, parents, hasChildren, o
     <Animated.View entering={FadeInDown.duration(300)}>
       <Card style={{ gap: 16, backgroundColor: colors.bg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <CategoryIcon icon={parent?.icon ?? form.icon} color={parent?.color ?? form.color} size={48} />
+          <CategoryIcon icon={form.icon} color={parent?.color ?? form.color} size={48} />
           <View style={{ flex: 1 }}>
             <Input value={form.name} onChangeText={(name) => setForm((f) => ({ ...f, name }))} placeholder={parent ? '세부 카테고리 이름' : '카테고리 이름'} maxLength={20} />
           </View>
@@ -155,32 +155,31 @@ function CategoryEditor({ type, category, initialParent, parents, hasChildren, o
             <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
               <Chip label="없음" active={!form.parentId} onPress={() => setForm((f) => ({ ...f, parentId: null }))} />
               {candidates.map((p) => (
-                <Chip key={p.id} label={p.name} active={p.id === form.parentId} color={p.color} onPress={() => setForm((f) => ({ ...f, parentId: p.id }))} />
+                <Chip key={p.id} label={p.name} active={p.id === form.parentId} color={p.color} onPress={() => setForm((f) => ({ ...f, parentId: p.id, icon: category?.icon ?? p.icon }))} />
               ))}
             </ScrollView>
           </View>
         )}
         {parent ? (
-          <AppText variant="caption" tone="textMuted">세부 카테고리는 상위 카테고리의 아이콘과 색을 따라요</AppText>
+          <AppText variant="caption" tone="textMuted">세부 카테고리의 색은 상위 카테고리를 따라요</AppText>
         ) : (
-          <>
-            <ColorPicker value={form.color} onChange={(color) => setForm((f) => ({ ...f, color }))} />
-            <View style={styles.iconGrid}>
-              {ICON_CHOICES.map((icon) => {
-                const active = icon === form.icon;
-                return (
-                  <PressableScale
-                    key={icon}
-                    onPress={() => setForm((f) => ({ ...f, icon }))}
-                    style={[styles.iconCell, { backgroundColor: active ? `${form.color}26` : colors.fill }]}
-                    scaleTo={0.85}>
-                    <CategoryGlyph icon={icon} size={20} color={active ? form.color : colors.textSub} />
-                  </PressableScale>
-                );
-              })}
-            </View>
-          </>
+          <ColorPicker value={form.color} onChange={(color) => setForm((f) => ({ ...f, color }))} />
         )}
+        <View style={styles.iconGrid}>
+          {ICON_CHOICES.map((icon) => {
+            const active = icon === form.icon;
+            const color = parent?.color ?? form.color;
+            return (
+              <PressableScale
+                key={icon}
+                onPress={() => setForm((f) => ({ ...f, icon }))}
+                style={[styles.iconCell, { backgroundColor: active ? `${color}26` : colors.fill }]}
+                scaleTo={0.85}>
+                <CategoryGlyph icon={icon} size={20} color={active ? color : colors.textSub} />
+              </PressableScale>
+            );
+          })}
+        </View>
         {error && <AppText tone="expense">{error}</AppText>}
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <Button title="취소" kind="ghost" onPress={onDone} style={{ flex: 1 }} />

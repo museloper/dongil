@@ -111,6 +111,15 @@ const ICONS = {
   'ellipsis-vertical': io.ellipsisVertical,
   happy: io.happy,
   ribbon: io.ribbon,
+  subway: io.subway,
+  bicycle: io.bicycle,
+  walk: io.walk,
+  basket: io.basket,
+  storefront: io.storefront,
+  pizza: io.pizza,
+  flower: io.flower,
+  taxi: customIcon('taxi'),
+  fuel: customIcon('fuel'),
   'baby-crawl': customIcon('baby-crawl'),
 } as const;
 

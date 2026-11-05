@@ -114,7 +114,7 @@ function CategoryEditor({ type, category, initialParent, parents, hasChildren, o
   const [form, setForm] = useState<CategoryInput>({
     name: category?.name ?? '',
     type,
-    icon: category?.icon ?? 'happy',
+    icon: category?.icon ?? initialParent?.icon ?? 'happy',
     color: category?.color ?? SWATCHES[6],
     parentId: category?.parentId ?? initialParent?.id ?? null,
   });
@@ -146,7 +146,7 @@ function CategoryEditor({ type, category, initialParent, parents, hasChildren, o
   return (
     <Card className="fade-in-up" style={{ display: 'grid', gap: 16, backgroundColor: 'var(--bg)' }}>
       <div className="row" style={{ gap: 12 }}>
-        <CategoryIcon icon={parent?.icon ?? form.icon} color={parent?.color ?? form.color} size={48} />
+        <CategoryIcon icon={form.icon} color={parent?.color ?? form.color} size={48} />
         <div style={{ flex: 1 }}>
           <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={parent ? '세부 카테고리 이름' : '카테고리 이름'} aria-label="카테고리 이름" maxLength={20} />
         </div>
@@ -158,34 +158,33 @@ function CategoryEditor({ type, category, initialParent, parents, hasChildren, o
           <div className="hscroll">
             <Chip label="없음" active={!form.parentId} onClick={() => setForm((f) => ({ ...f, parentId: null }))} />
             {candidates.map((p) => (
-              <Chip key={p.id} label={p.name} active={p.id === form.parentId} color={p.color} onClick={() => setForm((f) => ({ ...f, parentId: p.id }))} />
+              <Chip key={p.id} label={p.name} active={p.id === form.parentId} color={p.color} onClick={() => setForm((f) => ({ ...f, parentId: p.id, icon: category?.icon ?? p.icon }))} />
             ))}
           </div>
         </div>
       )}
       {parent ? (
-        <AppText variant="caption" tone="textMuted">세부 카테고리는 상위 카테고리의 아이콘과 색을 따라요</AppText>
+        <AppText variant="caption" tone="textMuted">세부 카테고리의 색은 상위 카테고리를 따라요</AppText>
       ) : (
-        <>
-          <ColorPicker value={form.color} onChange={(color) => setForm((f) => ({ ...f, color }))} />
-          <div className="icon-grid">
-            {ICON_CHOICES.map((icon) => {
-              const active = icon === form.icon;
-              return (
-                <Pressable
-                  key={icon}
-                  onClick={() => setForm((f) => ({ ...f, icon }))}
-                  className="icon-cell"
-                  aria-label={icon}
-                  aria-pressed={active}
-                  style={{ backgroundColor: active ? tint(form.color) : 'var(--fill)' }}>
-                  <Icon name={icon} size={20} color={active ? form.color : 'var(--textSub)'} />
-                </Pressable>
-              );
-            })}
-          </div>
-        </>
+        <ColorPicker value={form.color} onChange={(color) => setForm((f) => ({ ...f, color }))} />
       )}
+      <div className="icon-grid">
+        {ICON_CHOICES.map((icon) => {
+          const active = icon === form.icon;
+          const color = parent?.color ?? form.color;
+          return (
+            <Pressable
+              key={icon}
+              onClick={() => setForm((f) => ({ ...f, icon }))}
+              className="icon-cell"
+              aria-label={icon}
+              aria-pressed={active}
+              style={{ backgroundColor: active ? tint(color) : 'var(--fill)' }}>
+              <Icon name={icon} size={20} color={active ? color : 'var(--textSub)'} />
+            </Pressable>
+          );
+        })}
+      </div>
       {error && <AppText tone="expense">{error}</AppText>}
       <div className="row" style={{ gap: 8 }}>
         <Button title="취소" kind="ghost" onClick={onDone} style={{ flex: 1 }} />

@@ -175,11 +175,21 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
                   })}
                 </div>
                 {openGroup && openGroup.children.length > 0 && (
-                  <div className="hscroll">
-                    <Chip label="세부 없음" active={categoryId === openGroup.parent.id} onClick={() => setCategoryId(openGroup.parent.id)} />
-                    {openGroup.children.map((c) => (
-                      <Chip key={c.id} label={c.name} active={c.id === categoryId} color={c.color} onClick={() => setCategoryId(c.id)} />
-                    ))}
+                  <div className="cat-grid sub-cat-grid">
+                    {[openGroup.parent, ...openGroup.children].map((c) => {
+                      const active = c.id === categoryId;
+                      return (
+                        <Pressable
+                          key={c.id}
+                          onClick={() => setCategoryId(c.id)}
+                          className="cat-item"
+                          aria-pressed={active}
+                          style={active ? { backgroundColor: tint(c.color, 12), borderColor: c.color } : undefined}>
+                          <CategoryIcon icon={c.icon} color={c.color} size={34} />
+                          <AppText variant="caption" tone={active ? 'text' : 'textSub'} lines={1}>{c.id === openGroup.parent.id ? '세부 없음' : c.name}</AppText>
+                        </Pressable>
+                      );
+                    })}
                   </div>
                 )}
               </Field>

@@ -118,6 +118,7 @@ export interface SubcategoryStatDto {
   /** 상위 카테고리 id 와 같으면 세부 없이 상위에 바로 기록한 지출 */
   categoryId: string;
   name: string;
+  icon: string;
   amount: number;
   /** 상위 카테고리 금액 대비 */
   ratio: number;

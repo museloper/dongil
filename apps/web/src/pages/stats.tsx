@@ -122,15 +122,15 @@ function Stats() {
                       c.children.map((sub) =>
                         // 상위에 바로 기록한 지출은 따로 고를 조건이 없으므로 보여 주기만 한다
                         sub.categoryId === c.categoryId ? (
-                          <div key={sub.categoryId} style={{ paddingLeft: 48 }}>
-                            <SubcategoryRow name="세부 없음" ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                          <div key={sub.categoryId} style={{ paddingLeft: 12 }}>
+                            <SubcategoryRow icon={sub.icon} name="세부 없음" ratio={sub.ratio} amount={sub.amount} color={c.color} />
                           </div>
                         ) : (
                           <Pressable
                             key={sub.categoryId}
                             className={`stat-row${sub.categoryId === categoryId ? ' stat-row-active' : ''}`}
                             aria-pressed={sub.categoryId === categoryId}
-                            style={{ paddingLeft: 54 }}
+                            style={{ paddingLeft: 18 }}
                             onClick={() =>
                               setCategory(
                                 sub.categoryId === categoryId
@@ -138,7 +138,7 @@ function Stats() {
                                   : { id: sub.categoryId, name: categoryLabel({ name: sub.name, parentName: c.name }) },
                               )
                             }>
-                            <SubcategoryRow name={sub.name} ratio={sub.ratio} amount={sub.amount} color={c.color} />
+                            <SubcategoryRow icon={sub.icon} name={sub.name} ratio={sub.ratio} amount={sub.amount} color={c.color} />
                           </Pressable>
                         ),
                       )}
@@ -263,14 +263,17 @@ const balanceChange = (s: SummaryDto) => s.income - s.expense + s.transferIn - s
 
 const signedWon = (v: number) => (v > 0 ? '+' : v < 0 ? '-' : '') + formatWon(Math.abs(v));
 
-function SubcategoryRow({ name, ratio, amount, color }: { name: string; ratio: number; amount: number; color: string }) {
+function SubcategoryRow({ icon, name, ratio, amount, color }: { icon: string; name: string; ratio: number; amount: number; color: string }) {
   return (
-    <div style={{ display: 'grid', gap: 5, minWidth: 0 }}>
-      <div className="row between" style={{ gap: 8 }}>
-        <AppText variant="label" tone="textSub" lines={1}>{name} {Math.round(ratio * 100)}%</AppText>
-        <AppText variant="label" className="tabular nowrap">{formatWon(amount)}</AppText>
+    <div className="row" style={{ gap: 8 }}>
+      <CategoryIcon icon={icon} color={color} size={28} />
+      <div style={{ flex: 1, display: 'grid', gap: 5, minWidth: 0 }}>
+        <div className="row between" style={{ gap: 8 }}>
+          <AppText variant="label" tone="textSub" lines={1}>{name} {Math.round(ratio * 100)}%</AppText>
+          <AppText variant="label" className="tabular nowrap">{formatWon(amount)}</AppText>
+        </div>
+        <ProgressBar ratio={ratio} height={4} color={color} />
       </div>
-      <ProgressBar ratio={ratio} height={4} color={color} />
     </div>
   );
 }

@@ -39,10 +39,10 @@ export function CategoryIcon({ icon, color, size = 40 }: { icon: string; color: 
 }
 
 /** 카테고리 편집 화면에서 고를 수 있는 아이콘 목록 */
-export const ICON_CHOICES: (IconName | 'baby-crawl')[] = [
+export const ICON_CHOICES: (IconName | 'baby-crawl' | 'taxi' | 'fuel')[] = [
   'restaurant', 'cafe', 'beer', 'fast-food', 'bus', 'car', 'airplane', 'train',
   'bag-handle', 'cart', 'shirt', 'home', 'bulb', 'water', 'phone-portrait', 'wifi',
   'film', 'game-controller', 'musical-notes', 'book', 'school', 'barbell', 'medkit', 'heart',
   'paw', 'gift', 'repeat', 'card', 'wallet', 'trending-up', 'cash', 'business',
-  'briefcase', 'add-circle', 'ellipsis-horizontal', 'happy', 'baby-crawl', 'people', 'ribbon',
+  'briefcase', 'add-circle', 'ellipsis-horizontal', 'happy', 'baby-crawl', 'people', 'ribbon', 'subway', 'taxi', 'fuel', 'bicycle', 'walk', 'basket', 'storefront', 'pizza', 'flower',
 ];

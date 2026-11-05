@@ -185,12 +185,23 @@ export function TransactionForm({ initial }: { initial?: TransactionDto }) {
                   })}
                 </Animated.View>
                 {openGroup && openGroup.children.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 8 }}>
-                    <Chip label="세부 없음" active={categoryId === openGroup.parent.id} onPress={() => setCategoryId(openGroup.parent.id)} />
-                    {openGroup.children.map((c) => (
-                      <Chip key={c.id} label={c.name} active={c.id === categoryId} color={c.color} onPress={() => setCategoryId(c.id)} />
-                    ))}
-                  </ScrollView>
+                  <View style={[styles.catGrid, styles.subCatGrid, { backgroundColor: colors.fill }]}>
+                    {[openGroup.parent, ...openGroup.children].map((c) => {
+                      const active = c.id === categoryId;
+                      return (
+                        <PressableScale
+                          key={c.id}
+                          onPress={() => setCategoryId(c.id)}
+                          style={[styles.catItem, active && { backgroundColor: `${c.color}1F`, borderColor: c.color }]}
+                          scaleTo={0.92}>
+                          <CategoryIcon icon={c.icon} color={c.color} size={34} />
+                          <AppText variant="caption" tone={active ? 'text' : 'textSub'} numberOfLines={1}>
+                            {c.id === openGroup.parent.id ? '세부 없음' : c.name}
+                          </AppText>
+                        </PressableScale>
+                      );
+                    })}
+                  </View>
                 )}
               </Field>
             ) : null}
@@ -377,6 +388,7 @@ function AccountChips({ accounts, value, onChange }: {
 }
 
 const styles = StyleSheet.create({
+  subCatGrid: { marginHorizontal: 0, padding: 4, borderRadius: 14 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 12 },
   amountBox: { alignItems: 'center', gap: 4, paddingVertical: 24, paddingHorizontal: 20 },
   keypadWrap: { marginTop: 'auto' },

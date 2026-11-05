@@ -68,7 +68,7 @@ export const CategoryCreateSchema = z.object({
   type: CategoryTypeEnum,
   icon: z.string().min(1).max(40),
   color: hexColor,
-  /** 있으면 그 카테고리의 세부 카테고리. 아이콘과 색은 상위를 따른다 */
+  /** 있으면 그 카테고리의 세부 카테고리. 아이콘은 따로 고르고 색은 상위를 따른다 */
   parentId: z.string().min(1).nullish(),
 });
 export const CategoryUpdateSchema = z.object({

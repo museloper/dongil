@@ -137,12 +137,12 @@ export class StatsService {
     const total = [...sums.values()].reduce((a, b) => a + b, 0);
 
     // 세부 카테고리 지출을 상위로 합친다. 지출이 세부에만 있어도 상위 줄이 생긴다
-    const groups = new Map<string, { top: Category; own: number; subs: { categoryId: string; name: string; amount: number }[] }>();
+    const groups = new Map<string, { top: Category; own: number; subs: { categoryId: string; name: string; icon: string; amount: number }[] }>();
     for (const c of cats) {
       const top = c.parent ?? c;
       const group = groups.get(top.id) ?? { top, own: 0, subs: [] };
       const amount = sums.get(c.id) ?? 0;
-      if (c.parent) group.subs.push({ categoryId: c.id, name: c.name, amount });
+      if (c.parent) group.subs.push({ categoryId: c.id, name: c.name, icon: c.icon, amount });
       else group.own = amount;
       groups.set(top.id, group);
     }
@@ -150,7 +150,7 @@ export class StatsService {
     return [...groups.values()]
       .map(({ top, own, subs }) => {
         const amount = own + subs.reduce((sum, s) => sum + s.amount, 0);
-        const rows = subs.length && own ? [...subs, { categoryId: top.id, name: top.name, amount: own }] : subs;
+        const rows = subs.length && own ? [...subs, { categoryId: top.id, name: top.name, icon: top.icon, amount: own }] : subs;
         return {
           categoryId: top.id,
           name: top.name,
